@@ -1,8 +1,9 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { createSSEStream, sseHeaders } from '@/lib/sse';
-import { updateMetadata, API_DELAY_MS } from '@/lib/archive/client';
+import { updateMetadata, getItemMetadata, API_DELAY_MS } from '@/lib/archive/client';
 import { createOperationRun, finishOperationRun, addActivityLogEntry } from '@/lib/activityLog';
+import type { ArchiveItem } from '@/types';
 
 const MetadataUpdateSchema = z.object({
   field: z.string().min(1),
@@ -15,8 +16,42 @@ const RequestSchema = z.object({
   updates: z.array(MetadataUpdateSchema).min(1).max(50),
 });
 
+type Update = z.infer<typeof MetadataUpdateSchema>;
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Returns only the subset of updates that would actually change the item's metadata,
+// preventing "value already exists" failures and needless writes.
+function filterRedundantUpdates(updates: Update[], current: ArchiveItem): Update[] {
+  return updates.filter((u) => {
+    const currentVal = current[u.field];
+
+    if (u.operation === 'replace') {
+      if (typeof currentVal === 'string') return currentVal !== u.value;
+      if (Array.isArray(currentVal)) {
+        // replace on an array field sets it to a single value — skip only if it's already the sole value
+        return !(currentVal.length === 1 && currentVal[0] === u.value);
+      }
+      return true; // field absent — apply
+    }
+
+    if (u.operation === 'add') {
+      if (typeof currentVal === 'string') return currentVal !== u.value;
+      if (Array.isArray(currentVal)) return !currentVal.includes(u.value);
+      return true; // field absent — apply
+    }
+
+    if (u.operation === 'remove') {
+      if (!currentVal) return false; // nothing to remove
+      if (typeof currentVal === 'string') return currentVal === u.value;
+      if (Array.isArray(currentVal)) return currentVal.includes(u.value);
+      return false;
+    }
+
+    return true;
+  });
 }
 
 export async function POST(req: NextRequest) {
@@ -65,21 +100,39 @@ export async function POST(req: NextRequest) {
       send({ type: 'progress', current: i + 1, total: items.length, identifier, status: 'processing' });
 
       try {
-        const patches = updates.map((u) => ({ op: u.operation, path: `/${u.field}`, value: u.value }));
-        const result = await updateMetadata(identifier, patches);
+        // Pre-read: fetch current metadata and filter out patches that would be no-ops.
+        // This prevents "value already exists" 400s from aborting the whole patch.
+        let activePatchOps = updates;
+        try {
+          const currentMeta = await getItemMetadata(identifier);
+          activePatchOps = filterRedundantUpdates(updates, currentMeta);
+        } catch {
+          // Pre-read failed — proceed with all patches and let Archive.org decide
+        }
 
-        if (result.noChanges) {
+        if (activePatchOps.length === 0) {
           noChange++;
           addActivityLogEntry({ operationRunId: operationId, identifier, status: 'no_change', message: 'Already up to date' });
-          console.log(`⏭  ${identifier}: no changes needed`);
+          console.log(`⏭  ${identifier}: all values already current`);
           send({ type: 'progress', current: i + 1, total: items.length, identifier, status: 'no_change' });
           results.push({ identifier, success: true, noChange: true });
         } else {
-          successful++;
-          addActivityLogEntry({ operationRunId: operationId, identifier, status: 'success' });
-          console.log(`✅ ${identifier}: metadata updated`);
-          send({ type: 'progress', current: i + 1, total: items.length, identifier, status: 'completed' });
-          results.push({ identifier, success: true });
+          const patches = activePatchOps.map((u) => ({ op: u.operation, path: `/${u.field}`, value: u.value }));
+          const result = await updateMetadata(identifier, patches);
+
+          if (result.noChanges) {
+            noChange++;
+            addActivityLogEntry({ operationRunId: operationId, identifier, status: 'no_change', message: 'Already up to date' });
+            console.log(`⏭  ${identifier}: no changes needed`);
+            send({ type: 'progress', current: i + 1, total: items.length, identifier, status: 'no_change' });
+            results.push({ identifier, success: true, noChange: true });
+          } else {
+            successful++;
+            addActivityLogEntry({ operationRunId: operationId, identifier, status: 'success' });
+            console.log(`✅ ${identifier}: metadata updated (${activePatchOps.length} field${activePatchOps.length !== 1 ? 's' : ''})`);
+            send({ type: 'progress', current: i + 1, total: items.length, identifier, status: 'completed' });
+            results.push({ identifier, success: true });
+          }
         }
       } catch (error) {
         failed++;

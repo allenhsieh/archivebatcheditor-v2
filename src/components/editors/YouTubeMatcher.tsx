@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useUIStore } from '@/stores/ui';
 import { useLogStore } from '@/stores/log';
+import { extractVideoIdFromUrl } from '@/lib/youtube/urls';
 import { useSSEStream } from '@/hooks/useSSEStream';
 import type { SSEEvent, SSECompleteEvent } from '@/lib/sse';
 import type { MatchResult } from '@/lib/youtube/match';
@@ -24,7 +25,7 @@ function isSSECompleteEvent(e: SSEEvent): e is SSECompleteEvent {
 }
 
 export function YouTubeMatcher() {
-  const { selectedIdentifiers, itemsCache } = useUIStore();
+  const { selectedIdentifiers, itemsCache, setYoutubeMatches } = useUIStore();
   const queryClient = useQueryClient();
   const addLine = useLogStore((s) => s.addLine);
 
@@ -107,6 +108,16 @@ export function YouTubeMatcher() {
         data.matches.filter((m) => m.match !== null).map((m) => m.identifier)
       );
       setAccepted(autoAccepted);
+
+      // Populate the store so YouTube write editors can use these video IDs
+      const matchMap = new Map<string, string>();
+      for (const { identifier, match } of data.matches) {
+        if (match?.url) {
+          const vid = extractVideoIdFromUrl(match.url);
+          if (vid) matchMap.set(identifier, vid);
+        }
+      }
+      setYoutubeMatches(matchMap);
 
       const found = data.matches.filter((m) => m.match !== null).length;
       addLine({ type: 'info', message: `Found ${found} match${found !== 1 ? 'es' : ''} out of ${data.matches.length} items` });

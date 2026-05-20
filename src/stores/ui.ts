@@ -4,15 +4,18 @@ import type { ArchiveItem } from '@/types';
 interface UIStore {
   selectedIdentifiers: Set<string>;
   itemsCache: Map<string, ArchiveItem>;
+  youtubeMatches: Map<string, string>; // identifier → youtube videoId
   toggleSelection: (id: string) => void;
   selectAll: (ids: string[]) => void;
   clearSelection: () => void;
   setItemsCache: (items: ArchiveItem[]) => void;
+  setYoutubeMatches: (matches: Map<string, string>) => void;
 }
 
 export const useUIStore = create<UIStore>((set) => ({
   selectedIdentifiers: new Set(),
   itemsCache: new Map(),
+  youtubeMatches: new Map(),
 
   toggleSelection: (id) =>
     set((state) => {
@@ -31,4 +34,6 @@ export const useUIStore = create<UIStore>((set) => ({
 
   setItemsCache: (items) =>
     set({ itemsCache: new Map(items.map((i) => [i.identifier, i])) }),
+
+  setYoutubeMatches: (matches) => set({ youtubeMatches: new Map(matches) }),
 }));

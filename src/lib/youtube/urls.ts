@@ -4,6 +4,12 @@ export function createYouTubeUrl(videoId: string): string {
   return `https://youtu.be/${videoId}`;
 }
 
+export function extractVideoIdFromUrl(url: string): string | null {
+  const standardized = standardizeYouTubeUrl(url);
+  const m = standardized.match(/youtu\.be\/([a-zA-Z0-9_-]+)/);
+  return m?.[1] ?? null;
+}
+
 export function standardizeYouTubeUrl(url: string): string {
   if (!url) return url;
 
