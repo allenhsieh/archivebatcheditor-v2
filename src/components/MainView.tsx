@@ -6,6 +6,7 @@ import { ItemSelector } from './ItemSelector';
 import { MetadataEditor } from './editors/MetadataEditor';
 import { BatchImageUpload } from './editors/BatchImageUpload';
 import { LogViewer } from './LogViewer';
+import { YouTubeSection } from './YouTubeSection';
 import { useUIStore } from '@/stores/ui';
 
 export type FetchMode =
@@ -40,6 +41,7 @@ export function MainView() {
         {selectedCount > 0 && <MetadataEditor />}
         {selectedCount > 0 && <BatchImageUpload />}
 
+        <YouTubeSection />
         <LogViewer />
       </main>
     </div>
