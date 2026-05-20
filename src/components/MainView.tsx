@@ -3,6 +3,9 @@
 import { useState } from 'react';
 import { SearchSection } from './SearchSection';
 import { ItemSelector } from './ItemSelector';
+import { MetadataEditor } from './editors/MetadataEditor';
+import { LogViewer } from './LogViewer';
+import { useUIStore } from '@/stores/ui';
 
 export type FetchMode =
   | { type: 'idle' }
@@ -12,6 +15,7 @@ export type FetchMode =
 export function MainView() {
   const [mode, setMode] = useState<FetchMode>({ type: 'idle' });
   const [isLoading, setIsLoading] = useState(false);
+  const selectedCount = useUIStore((s) => s.selectedIdentifiers.size);
 
   return (
     <div className="min-h-screen bg-zinc-50">
@@ -31,6 +35,10 @@ export function MainView() {
         {mode.type !== 'idle' && (
           <ItemSelector mode={mode} onLoadingChange={setIsLoading} />
         )}
+
+        {selectedCount > 0 && <MetadataEditor />}
+
+        <LogViewer />
       </main>
     </div>
   );
