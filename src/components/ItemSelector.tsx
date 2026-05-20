@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { ArchiveItem } from '@/types';
 import type { FetchMode } from './MainView';
 import { useUIStore } from '@/stores/ui';
+import { useToastStore } from '@/stores/toast';
 
 interface ItemSelectorProps {
   mode: FetchMode;
@@ -37,6 +38,7 @@ async function fetchItems(mode: FetchMode): Promise<ItemsResponse> {
 export function ItemSelector({ mode, onLoadingChange }: ItemSelectorProps) {
   const { selectedIdentifiers, toggleSelection, selectAll, clearSelection, setItemsCache } =
     useUIStore();
+  const addToast = useToastStore((s) => s.addToast);
 
   const queryKey =
     mode.type === 'user-items'
@@ -51,6 +53,15 @@ export function ItemSelector({ mode, onLoadingChange }: ItemSelectorProps) {
   useEffect(() => {
     onLoadingChange(isLoading);
   }, [isLoading, onLoadingChange]);
+
+  useEffect(() => {
+    if (error) {
+      addToast({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Failed to load items',
+      });
+    }
+  }, [error, addToast]);
 
   const items = useMemo(() => data?.items ?? [], [data]);
   const selectedCount = selectedIdentifiers.size;

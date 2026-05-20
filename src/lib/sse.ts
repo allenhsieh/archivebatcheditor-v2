@@ -11,6 +11,7 @@ export interface SSEProgressEvent {
   identifier: string;
   status: 'processing' | 'completed' | 'error' | 'no_change';
   error?: string;
+  message?: string;
 }
 
 export interface SSECompleteEvent {
@@ -20,6 +21,7 @@ export interface SSECompleteEvent {
   failed: number;
   noChange: number;
   results: Array<{ identifier: string; success: boolean; noChange?: boolean; error?: string }>;
+  dryRun?: boolean;
 }
 
 export interface SSEErrorEvent {

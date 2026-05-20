@@ -45,7 +45,8 @@ export function MetadataEditor() {
   const [customField, setCustomField] = useState('');
   const [value, setValue] = useState('');
   const [operation, setOperation] = useState<Operation>('add');
-  const [progress, setProgress] = useState<Record<string, ItemProgress>>({});
+  const [dryRun, setDryRun] = useState(false);
+  const [progress, setProgress] = useState<Record<string, ItemProgress & { message?: string }>>({});
   const [summary, setSummary] = useState<SSECompleteEvent | null>(null);
 
   const selectedList = Array.from(selectedIdentifiers);
@@ -56,10 +57,10 @@ export function MetadataEditor() {
     if (isSSEProgressEvent(event)) {
       setProgress((prev) => ({
         ...prev,
-        [event.identifier]: { status: event.status, error: event.error },
+        [event.identifier]: { status: event.status, error: event.error, message: event.message },
       }));
       if (event.status === 'completed') {
-        addLine({ type: 'success', message: `Metadata updated`, identifier: event.identifier });
+        addLine({ type: 'success', message: event.message ?? 'Metadata updated', identifier: event.identifier });
       } else if (event.status === 'error') {
         addLine({ type: 'error', message: event.error ?? 'Update failed', identifier: event.identifier });
       } else if (event.status === 'no_change') {
@@ -67,15 +68,16 @@ export function MetadataEditor() {
       }
     } else if (isSSECompleteEvent(event)) {
       setSummary(event);
+      const verb = event.dryRun ? 'would update' : 'updated';
       addLine({
         type: 'info',
-        message: `Metadata update complete — ${event.successful} updated, ${event.failed} failed${event.noChange > 0 ? `, ${event.noChange} no change` : ''}`,
+        message: `${event.dryRun ? 'Dry-run preview' : 'Metadata update'} complete — ${event.successful} ${verb}, ${event.failed} failed${event.noChange > 0 ? `, ${event.noChange} no change` : ''}`,
       });
-      void queryClient.invalidateQueries({ queryKey: ['activity-log'] });
+      if (!event.dryRun) void queryClient.invalidateQueries({ queryKey: ['activity-log'] });
     } else if (event.type === 'start') {
-      addLine({ type: 'info', message: `Starting metadata update for ${event.total} item${event.total !== 1 ? 's' : ''}…` });
+      addLine({ type: 'info', message: `${dryRun ? 'Previewing changes for' : 'Starting metadata update for'} ${event.total} item${event.total !== 1 ? 's' : ''}…` });
     }
-  }, [queryClient, addLine]);
+  }, [queryClient, addLine, dryRun]);
 
   const { status, startStream, cancel } = useSSEStream(handleEvent);
   const isRunning = status === 'streaming';
@@ -95,6 +97,7 @@ export function MetadataEditor() {
     startStream('/api/archive/update-metadata', {
       items: selectedList,
       updates: [{ field: activeField, value, operation }],
+      dryRun,
     });
   }
 
@@ -169,13 +172,32 @@ export function MetadataEditor() {
           </div>
         )}
 
-        <div className="flex gap-2">
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-1.5 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={dryRun}
+              onChange={(e) => setDryRun(e.target.checked)}
+              disabled={isRunning}
+              className="h-3.5 w-3.5 rounded border-zinc-300 accent-zinc-900"
+            />
+            <span className="text-xs text-zinc-500">Dry run</span>
+          </label>
           <button
             onClick={handleStart}
             disabled={!canStart}
-            className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className={[
+              'rounded-md px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50',
+              dryRun
+                ? 'bg-blue-600 text-white hover:bg-blue-500'
+                : 'bg-zinc-900 text-white hover:bg-zinc-700',
+            ].join(' ')}
           >
-            {isRunning ? 'Running…' : `Update ${selectedList.length} item${selectedList.length !== 1 ? 's' : ''}`}
+            {isRunning
+              ? dryRun ? 'Previewing…' : 'Running…'
+              : dryRun
+                ? `Preview ${selectedList.length} item${selectedList.length !== 1 ? 's' : ''}`
+                : `Update ${selectedList.length} item${selectedList.length !== 1 ? 's' : ''}`}
           </button>
           {isRunning && (
             <button
@@ -196,10 +218,13 @@ export function MetadataEditor() {
           </div>
           <ul className="max-h-48 overflow-y-auto space-y-0.5">
             {progressEntries.map(([id, p]) => (
-              <li key={id} className="flex items-center gap-2 text-xs">
-                <StatusDot status={p.status} />
+              <li key={id} className="flex items-start gap-2 text-xs">
+                <StatusDot status={p.status} dryRun={dryRun} />
                 <span className="truncate font-mono text-zinc-700">{id}</span>
                 {p.error && <span className="text-red-600 truncate">{p.error}</span>}
+                {!p.error && p.message && p.status === 'completed' && (
+                  <span className="text-zinc-400 truncate">{p.message}</span>
+                )}
               </li>
             ))}
           </ul>
@@ -208,9 +233,14 @@ export function MetadataEditor() {
 
       {/* Summary */}
       {summary && (
-        <div className="rounded-md border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm">
-          <span className="font-medium text-zinc-900">Done: </span>
-          <span className="text-green-700">{summary.successful} updated</span>
+        <div className={[
+          'rounded-md border px-4 py-3 text-sm',
+          summary.dryRun ? 'border-blue-200 bg-blue-50' : 'border-zinc-200 bg-zinc-50',
+        ].join(' ')}>
+          <span className="font-medium text-zinc-900">{summary.dryRun ? 'Preview: ' : 'Done: '}</span>
+          <span className={summary.dryRun ? 'text-blue-700' : 'text-green-700'}>
+            {summary.successful} {summary.dryRun ? 'would update' : 'updated'}
+          </span>
           {summary.noChange > 0 && (
             <span className="text-zinc-500"> · {summary.noChange} no change</span>
           )}
@@ -223,13 +253,13 @@ export function MetadataEditor() {
   );
 }
 
-function StatusDot({ status }: { status: ItemProgress['status'] }) {
+function StatusDot({ status, dryRun }: { status: ItemProgress['status']; dryRun?: boolean }) {
   const cls = {
     pending: 'bg-zinc-300',
     processing: 'bg-blue-400 animate-pulse',
-    completed: 'bg-green-500',
+    completed: dryRun ? 'bg-blue-500' : 'bg-green-500',
     no_change: 'bg-zinc-400',
     error: 'bg-red-500',
   }[status];
-  return <span className={`h-2 w-2 shrink-0 rounded-full ${cls}`} />;
+  return <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${cls}`} />;
 }

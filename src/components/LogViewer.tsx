@@ -9,9 +9,29 @@ type OperationRun = typeof operationRuns.$inferSelect;
 type ActivityLogEntry = typeof activityLogEntries.$inferSelect;
 
 type StatusFilter = 'all' | 'failure' | 'success' | 'no_change';
+type OpTypeFilter = 'all' | 'metadata_update' | 'flyer_fanout' | 'youtube_recording_date' | 'youtube_tags' | 'youtube_description';
+type DateFilter = 'all' | 'today' | 'week';
 
-async function fetchRuns(): Promise<{ runs: OperationRun[] }> {
-  const res = await fetch('/api/activity-log?limit=20');
+function sinceFromDateFilter(f: DateFilter): string | undefined {
+  if (f === 'today') {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d.toISOString();
+  }
+  if (f === 'week') {
+    const d = new Date();
+    d.setDate(d.getDate() - 7);
+    return d.toISOString();
+  }
+  return undefined;
+}
+
+async function fetchRuns(opType: OpTypeFilter, dateFilter: DateFilter): Promise<{ runs: OperationRun[] }> {
+  const params = new URLSearchParams({ limit: '50' });
+  if (opType !== 'all') params.set('operationType', opType);
+  const since = sinceFromDateFilter(dateFilter);
+  if (since) params.set('since', since);
+  const res = await fetch(`/api/activity-log?${params.toString()}`);
   if (!res.ok) throw new Error('Failed to load activity log');
   return res.json() as Promise<{ runs: OperationRun[] }>;
 }
@@ -25,11 +45,13 @@ async function fetchEntries(runId: string): Promise<{ entries: ActivityLogEntry[
 export function LogViewer() {
   const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [opTypeFilter, setOpTypeFilter] = useState<OpTypeFilter>('all');
+  const [dateFilter, setDateFilter] = useState<DateFilter>('all');
   const selectAll = useUIStore((s) => s.selectAll);
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['activity-log'],
-    queryFn: fetchRuns,
+    queryKey: ['activity-log', opTypeFilter, dateFilter],
+    queryFn: () => fetchRuns(opTypeFilter, dateFilter),
   });
 
   const { data: entriesData } = useQuery({
@@ -59,6 +81,41 @@ export function LogViewer() {
         >
           Refresh
         </button>
+      </div>
+
+      {/* Run-level filters */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-zinc-400">Type:</span>
+          <select
+            value={opTypeFilter}
+            onChange={(e) => setOpTypeFilter(e.target.value as OpTypeFilter)}
+            className="rounded border border-zinc-200 px-2 py-0.5 text-xs text-zinc-700 outline-none focus:border-zinc-400"
+          >
+            <option value="all">All</option>
+            <option value="metadata_update">Metadata Update</option>
+            <option value="flyer_fanout">Flyer Fanout</option>
+            <option value="youtube_recording_date">Recording Date</option>
+            <option value="youtube_tags">Tags</option>
+            <option value="youtube_description">Description</option>
+          </select>
+        </div>
+        <div className="flex gap-1">
+          {(['all', 'today', 'week'] as DateFilter[]).map((d) => (
+            <button
+              key={d}
+              onClick={() => setDateFilter(d)}
+              className={[
+                'rounded px-2 py-0.5 text-xs font-medium transition-colors',
+                dateFilter === d
+                  ? 'bg-zinc-900 text-white'
+                  : 'text-zinc-500 hover:bg-zinc-100',
+              ].join(' ')}
+            >
+              {d === 'all' ? 'All time' : d === 'today' ? 'Today' : 'This week'}
+            </button>
+          ))}
+        </div>
       </div>
 
       {isLoading && (

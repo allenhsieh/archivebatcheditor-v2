@@ -7,8 +7,16 @@ import { useLogStore } from '@/stores/log';
 import { useSSEStream } from '@/hooks/useSSEStream';
 import type { SSEEvent, SSECompleteEvent } from '@/lib/sse';
 
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif'];
+const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif'];
 const MAX_BYTES = 10 * 1024 * 1024;
+
+function isAllowedFile(f: File): boolean {
+  if (ALLOWED_TYPES.includes(f.type)) return true;
+  // HEIC files may be reported with an empty or generic MIME type in some browsers
+  const ext = f.name.split('.').pop()?.toLowerCase() ?? '';
+  return ALLOWED_EXTENSIONS.includes(ext);
+}
 
 type ItemProgress = { status: 'pending' | 'processing' | 'completed' | 'error'; error?: string };
 
@@ -63,8 +71,8 @@ export function BatchImageUpload() {
     setFileError(null);
     setFile(null);
     if (!f) return;
-    if (!ALLOWED_TYPES.includes(f.type)) {
-      setFileError('Only JPEG, PNG, GIF, and WebP images are supported.');
+    if (!isAllowedFile(f)) {
+      setFileError('Only JPEG, PNG, GIF, WebP, and HEIC images are supported.');
       return;
     }
     if (f.size > MAX_BYTES) {
@@ -119,7 +127,7 @@ export function BatchImageUpload() {
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/jpeg,image/png,image/gif,image/webp"
+            accept="image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif,.heic,.heif"
             onChange={handleFileChange}
             className="sr-only"
           />

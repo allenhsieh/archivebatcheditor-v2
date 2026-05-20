@@ -14,6 +14,7 @@ const MetadataUpdateSchema = z.object({
 const RequestSchema = z.object({
   items: z.array(z.string().min(1)).min(1).max(1000),
   updates: z.array(MetadataUpdateSchema).min(1).max(50),
+  dryRun: z.boolean().optional().default(false),
 });
 
 type Update = z.infer<typeof MetadataUpdateSchema>;
@@ -73,16 +74,18 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const { items, updates } = parsed.data;
+  const { items, updates, dryRun } = parsed.data;
 
   const stream = createSSEStream(async (send) => {
-    const operationId = createOperationRun({
-      operationType: 'metadata_update',
-      totalItems: items.length,
-      parameters: { updates },
-    });
+    const operationId = dryRun
+      ? 'dry-run'
+      : createOperationRun({
+          operationType: 'metadata_update',
+          totalItems: items.length,
+          parameters: { updates },
+        });
 
-    console.log(`🔄 Metadata update started: ${items.length} item(s), operation ${operationId}`);
+    console.log(`${dryRun ? '🔍 Dry-run preview' : '🔄 Metadata update'}: ${items.length} item(s)${dryRun ? '' : `, operation ${operationId}`}`);
     send({ type: 'start', total: items.length, operationId });
 
     let successful = 0;
@@ -103,19 +106,37 @@ export async function POST(req: NextRequest) {
         // Pre-read: fetch current metadata and filter out patches that would be no-ops.
         // This prevents "value already exists" 400s from aborting the whole patch.
         let activePatchOps = updates;
+        let preReadSucceeded = false;
+        let currentMeta: ArchiveItem | null = null;
         try {
-          const currentMeta = await getItemMetadata(identifier);
+          currentMeta = await getItemMetadata(identifier);
           activePatchOps = filterRedundantUpdates(updates, currentMeta);
+          preReadSucceeded = true;
         } catch {
           // Pre-read failed — proceed with all patches and let Archive.org decide
         }
 
         if (activePatchOps.length === 0) {
           noChange++;
-          addActivityLogEntry({ operationRunId: operationId, identifier, status: 'no_change', message: 'Already up to date' });
+          if (!dryRun) {
+            addActivityLogEntry({ operationRunId: operationId, identifier, status: 'no_change', message: 'Already up to date' });
+          }
           console.log(`⏭  ${identifier}: all values already current`);
-          send({ type: 'progress', current: i + 1, total: items.length, identifier, status: 'no_change' });
+          send({ type: 'progress', current: i + 1, total: items.length, identifier, status: 'no_change', message: 'Already up to date' });
           results.push({ identifier, success: true, noChange: true });
+        } else if (dryRun) {
+          // Dry-run: report would-change without writing
+          successful++;
+          const diffMsg = preReadSucceeded && currentMeta !== null
+            ? activePatchOps.map((u) => {
+                const cur = currentMeta![u.field];
+                const curStr = Array.isArray(cur) ? cur.join(', ') : (typeof cur === 'string' ? cur : '(none)');
+                return `${u.field}: ${curStr} → ${u.value}`;
+              }).join('; ')
+            : activePatchOps.map((u) => `${u.field} → ${u.value}`).join('; ');
+          console.log(`🔍 ${identifier}: would update — ${diffMsg}`);
+          send({ type: 'progress', current: i + 1, total: items.length, identifier, status: 'completed', message: diffMsg });
+          results.push({ identifier, success: true });
         } else {
           const patches = activePatchOps.map((u) => ({ op: u.operation, path: `/${u.field}`, value: u.value }));
           const result = await updateMetadata(identifier, patches);
@@ -137,7 +158,9 @@ export async function POST(req: NextRequest) {
       } catch (error) {
         failed++;
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        addActivityLogEntry({ operationRunId: operationId, identifier, status: 'failure', errorMessage });
+        if (!dryRun) {
+          addActivityLogEntry({ operationRunId: operationId, identifier, status: 'failure', errorMessage });
+        }
         console.error(`❌ ${identifier}: ${errorMessage}`);
         send({ type: 'progress', current: i + 1, total: items.length, identifier, status: 'error', error: errorMessage });
         results.push({ identifier, success: false, error: errorMessage });
@@ -146,9 +169,11 @@ export async function POST(req: NextRequest) {
       if (i < items.length - 1) await sleep(API_DELAY_MS);
     }
 
-    finishOperationRun(operationId, { successfulItems: successful, noChangeItems: noChange, failedItems: failed });
-    console.log(`🏁 Metadata update complete: ${successful} updated, ${noChange} no change, ${failed} failed`);
-    send({ type: 'complete', total: items.length, successful, failed, noChange, results });
+    if (!dryRun) {
+      finishOperationRun(operationId, { successfulItems: successful, noChangeItems: noChange, failedItems: failed });
+    }
+    console.log(`🏁 ${dryRun ? 'Dry-run preview' : 'Metadata update'} complete: ${successful} ${dryRun ? 'would update' : 'updated'}, ${noChange} no change, ${failed} failed`);
+    send({ type: 'complete', total: items.length, successful, failed, noChange, results, dryRun });
   });
 
   return new Response(stream, { headers: sseHeaders() });

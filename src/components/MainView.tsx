@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { SearchSection } from './SearchSection';
 import { ItemSelector } from './ItemSelector';
 import { MetadataEditor } from './editors/MetadataEditor';
@@ -12,6 +12,7 @@ import { YouTubeDescriptionSync } from './editors/YouTubeDescriptionSync';
 import { LogViewer } from './LogViewer';
 import { LiveLog } from './LiveLog';
 import { YouTubeSection } from './YouTubeSection';
+import { ToastContainer } from './ToastContainer';
 import { useUIStore } from '@/stores/ui';
 
 export type FetchMode =
@@ -22,7 +23,36 @@ export type FetchMode =
 export function MainView() {
   const [mode, setMode] = useState<FetchMode>({ type: 'idle' });
   const [isLoading, setIsLoading] = useState(false);
-  const selectedCount = useUIStore((s) => s.selectedIdentifiers.size);
+  const { selectedIdentifiers, itemsCache, selectAll, clearSelection } = useUIStore((s) => ({
+    selectedIdentifiers: s.selectedIdentifiers,
+    itemsCache: s.itemsCache,
+    selectAll: s.selectAll,
+    clearSelection: s.clearSelection,
+  }));
+  const selectedCount = selectedIdentifiers.size;
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if ((e.target as HTMLElement).isContentEditable) return;
+
+      if ((e.metaKey || e.ctrlKey) && e.key === 'a') {
+        const ids = Array.from(itemsCache.keys());
+        if (ids.length > 0) {
+          e.preventDefault();
+          selectAll(ids);
+        }
+      }
+
+      if (e.key === 'Escape') {
+        clearSelection();
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [itemsCache, selectAll, clearSelection]);
 
   return (
     <div className="min-h-screen bg-zinc-50">
@@ -54,6 +84,7 @@ export function MainView() {
         <LiveLog />
         <LogViewer />
       </main>
+      <ToastContainer />
     </div>
   );
 }
