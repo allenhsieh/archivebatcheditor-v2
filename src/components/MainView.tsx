@@ -23,12 +23,10 @@ export type FetchMode =
 export function MainView() {
   const [mode, setMode] = useState<FetchMode>({ type: 'idle' });
   const [isLoading, setIsLoading] = useState(false);
-  const { selectedIdentifiers, itemsCache, selectAll, clearSelection } = useUIStore((s) => ({
-    selectedIdentifiers: s.selectedIdentifiers,
-    itemsCache: s.itemsCache,
-    selectAll: s.selectAll,
-    clearSelection: s.clearSelection,
-  }));
+  const selectedIdentifiers = useUIStore((s) => s.selectedIdentifiers);
+  const itemsCache = useUIStore((s) => s.itemsCache);
+  const selectAll = useUIStore((s) => s.selectAll);
+  const clearSelection = useUIStore((s) => s.clearSelection);
   const selectedCount = selectedIdentifiers.size;
 
   useEffect(() => {
