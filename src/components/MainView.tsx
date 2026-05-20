@@ -5,6 +5,7 @@ import { SearchSection } from './SearchSection';
 import { ItemSelector } from './ItemSelector';
 import { MetadataEditor } from './editors/MetadataEditor';
 import { BatchImageUpload } from './editors/BatchImageUpload';
+import { YouTubeMatcher } from './editors/YouTubeMatcher';
 import { LogViewer } from './LogViewer';
 import { LiveLog } from './LiveLog';
 import { YouTubeSection } from './YouTubeSection';
@@ -41,6 +42,7 @@ export function MainView() {
 
         {selectedCount > 0 && <MetadataEditor />}
         {selectedCount > 0 && <BatchImageUpload />}
+        {selectedCount > 0 && <YouTubeMatcher />}
 
         <YouTubeSection />
         <LiveLog />
