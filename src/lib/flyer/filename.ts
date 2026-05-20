@@ -2,14 +2,17 @@ import { standardizeDate, extractDateFromTitle } from '@/lib/archive/dates';
 
 // Lifted verbatim from v1 server/utils.ts:268
 // Generates {YYYY-MM-DD}-flyer_itemimage.{ext} using a multi-source date fallback chain.
+// overrideExtension (e.g. '.jpg') takes precedence over the original filename's extension —
+// used when the server has already converted the file to a different format.
 export function generateFlyerFilename(
   identifier: string,
   title: string,
   date: string | undefined,
-  originalFilename: string
+  originalFilename: string,
+  overrideExtension?: string
 ): string {
   const lastDotIndex = originalFilename.lastIndexOf('.');
-  const extension = lastDotIndex !== -1 ? originalFilename.slice(lastDotIndex) : '.jpg';
+  const extension = overrideExtension ?? (lastDotIndex !== -1 ? originalFilename.slice(lastDotIndex) : '.jpg');
 
   let extractedDate: string | null = null;
 

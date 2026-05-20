@@ -44,4 +44,13 @@ describe('generateFlyerFilename', () => {
     const result = generateFlyerFilename('test-item', 'Title', '13/45/2023', 'file.jpg');
     expect(result).toMatch(/^\d{4}-\d{2}-\d{2}-flyer_itemimage\.jpg$/);
   });
+
+  test('overrideExtension replaces original extension', () => {
+    expect(generateFlyerFilename('test-item', 'Concert 2023-07-04', undefined, 'photo.webp', '.jpg'))
+      .toBe('2023-07-04-flyer_itemimage.jpg');
+    expect(generateFlyerFilename('test-item', 'Concert 2023-07-04', undefined, 'photo.heic', '.jpg'))
+      .toBe('2023-07-04-flyer_itemimage.jpg');
+    expect(generateFlyerFilename('test-item', 'Concert 2023-07-04', undefined, 'photo.png', '.jpg'))
+      .toBe('2023-07-04-flyer_itemimage.jpg');
+  });
 });

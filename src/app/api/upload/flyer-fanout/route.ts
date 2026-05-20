@@ -1,12 +1,52 @@
 import { NextRequest } from 'next/server';
+import sharp from 'sharp';
 import { env } from '@/lib/env';
 import { createSSEStream, sseHeaders } from '@/lib/sse';
 import { generateFlyerFilename } from '@/lib/flyer/filename';
 import { API_DELAY_MS } from '@/lib/archive/client';
 import { createOperationRun, finishOperationRun, addActivityLogEntry } from '@/lib/activityLog';
 
-const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
+const ALLOWED_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'image/heic',
+  'image/heif',
+]);
+const ALLOWED_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif']);
 const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
+
+// Browsers sometimes report empty/generic MIME for HEIC — fall back to extension
+function resolveFileType(file: File): string {
+  if (file.type && ALLOWED_TYPES.has(file.type)) return file.type;
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+  const extToMime: Record<string, string> = {
+    jpg: 'image/jpeg', jpeg: 'image/jpeg',
+    png: 'image/png', gif: 'image/gif',
+    webp: 'image/webp', heic: 'image/heic', heif: 'image/heif',
+  };
+  return extToMime[ext] ?? file.type;
+}
+
+// Convert any non-JPEG input to maximum-quality JPEG.
+// JPEG q=100 via libjpeg is the highest-fidelity lossy encoding available.
+// Archive.org's thumbnail/cover pipeline handles JPEG universally.
+async function toJpegIfNeeded(
+  bytes: ArrayBuffer,
+  mimeType: string
+): Promise<{ buffer: ArrayBuffer; mimeType: string; extOverride: '.jpg' | null }> {
+  if (mimeType === 'image/jpeg') {
+    return { buffer: bytes, mimeType, extOverride: null };
+  }
+  const converted = await sharp(Buffer.from(bytes))
+    .jpeg({ quality: 100, mozjpeg: false })
+    .toBuffer();
+  // Copy into a fresh ArrayBuffer to avoid sharing sharp's internal buffer pool
+  const result = new ArrayBuffer(converted.byteLength);
+  new Uint8Array(result).set(converted);
+  return { buffer: result, mimeType: 'image/jpeg', extOverride: '.jpg' };
+}
 
 interface ItemMeta {
   identifier: string;
@@ -41,8 +81,10 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  if (!ALLOWED_TYPES.has(file.type)) {
-    return new Response(JSON.stringify({ error: `Unsupported file type: ${file.type}. Use JPEG, PNG, GIF, or WebP.` }), {
+  const resolvedType = resolveFileType(file);
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+  if (!ALLOWED_TYPES.has(resolvedType) && !ALLOWED_EXTENSIONS.has(ext)) {
+    return new Response(JSON.stringify({ error: `Unsupported file type: ${file.type || ext}. Use JPEG, PNG, GIF, WebP, or HEIC.` }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
     });
@@ -77,14 +119,20 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // Buffer the file once for reuse across all items
-  const fileBytes = await file.arrayBuffer();
+  // Buffer and convert to JPEG (highest quality) for universal Archive.org compatibility
+  const rawBytes = await file.arrayBuffer();
+  const resolvedMimeType = resolveFileType(file);
+  const { buffer: fileBytes, mimeType: uploadMimeType, extOverride } = await toJpegIfNeeded(rawBytes, resolvedMimeType);
+
+  if (extOverride) {
+    console.log(`🖼  Converted ${file.name} (${resolvedMimeType}) → JPEG for upload (${(fileBytes.byteLength / 1024).toFixed(0)} KB)`);
+  }
 
   const stream = createSSEStream(async (send) => {
     const operationId = createOperationRun({
       operationType: 'flyer_fanout',
       totalItems: items.length,
-      parameters: { originalFilename: file.name, fileType: file.type, fileSize: file.size },
+      parameters: { originalFilename: file.name, fileType: uploadMimeType, fileSize: fileBytes.byteLength },
     });
 
     console.log(`🔄 Flyer fanout started: ${items.length} item(s), file "${file.name}", operation ${operationId}`);
@@ -103,7 +151,8 @@ export async function POST(req: NextRequest) {
           item.identifier,
           item.title ?? item.identifier,
           item.date,
-          file.name
+          file.name,
+          extOverride ?? undefined
         );
 
         const uploadUrl = `https://s3.us.archive.org/${encodeURIComponent(item.identifier)}/${encodeURIComponent(filename)}`;
@@ -112,7 +161,7 @@ export async function POST(req: NextRequest) {
           method: 'PUT',
           headers: {
             Authorization: `LOW ${env.ARCHIVE_ACCESS_KEY}:${env.ARCHIVE_SECRET_KEY}`,
-            'Content-Type': file.type,
+            'Content-Type': uploadMimeType,
             'Content-Length': fileBytes.byteLength.toString(),
             'x-amz-auto-make-bucket': '1',
             'x-archive-queue-derive': '0',
