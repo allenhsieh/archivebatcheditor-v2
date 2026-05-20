@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
       if (i < matches.length - 1) await sleep(API_DELAY_MS);
     }
 
-    finishOperationRun(operationId, { successfulItems: successful + noChange, failedItems: failed });
+    finishOperationRun(operationId, { successfulItems: successful, noChangeItems: noChange, failedItems: failed });
     console.log(`🏁 YouTube matches applied: ${successful} set, ${noChange} no change, ${failed} failed`);
     send({ type: 'complete', total: matches.length, successful, failed, noChange, results });
   });

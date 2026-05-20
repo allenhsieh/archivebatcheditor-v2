@@ -28,7 +28,7 @@ export function createOperationRun(
 
 export function finishOperationRun(
   id: string,
-  stats: { successfulItems: number; failedItems: number },
+  stats: { successfulItems: number; noChangeItems?: number; failedItems: number },
   injectedDb?: AppDb
 ): void {
   const activeDb = injectedDb ?? defaultDb;
@@ -37,6 +37,7 @@ export function finishOperationRun(
     .set({
       finishedAt: new Date(),
       successfulItems: stats.successfulItems,
+      noChangeItems: stats.noChangeItems ?? 0,
       failedItems: stats.failedItems,
     })
     .where(eq(operationRuns.id, id))

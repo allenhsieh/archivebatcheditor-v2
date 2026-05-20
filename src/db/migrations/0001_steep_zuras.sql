@@ -1,0 +1,1 @@
+ALTER TABLE `operation_runs` ADD `no_change_items` integer DEFAULT 0 NOT NULL;

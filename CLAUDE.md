@@ -80,8 +80,8 @@ Use type guards. Catalog (port from v1 — see [LIFT_LIST.md](./LIFT_LIST.md)):
 - `isYouTubeQuotaError(error)` — quotaExceeded
 - `isRateLimitError(error)` — 429s
 
-### 3. "no changes to _meta.xml" 400 is a SUCCESS
-Archive.org returns this when your patch didn't actually change anything. The retry wrapper must treat it as success and return immediately — no retries, no error log.
+### 3. "no changes to _meta.xml" 400 means already-current — not a write, not an error
+Archive.org returns this when your patch didn't actually change anything. The retry wrapper must treat it as already-current and return immediately — no retries, no error log. Log the item as `status: 'no_change'` in the activity log, and count it in `noChangeItems` (not `successfulItems`) in `operation_runs`.
 
 ### 4. YouTube Data API `search` endpoint is BANNED
 Costs 100 quota units per call; daily limit 10K = only 100 searches/day. Use:

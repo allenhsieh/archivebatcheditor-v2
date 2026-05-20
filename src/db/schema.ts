@@ -70,6 +70,7 @@ export const operationRuns = sqliteTable('operation_runs', {
   finishedAt: integer('finished_at', { mode: 'timestamp' }),
   totalItems: integer('total_items').notNull(),
   successfulItems: integer('successful_items').notNull().default(0),
+  noChangeItems: integer('no_change_items').notNull().default(0),
   failedItems: integer('failed_items').notNull().default(0),
   parameters: text('parameters', { mode: 'json' }).$type<Record<string, unknown>>(),
 });

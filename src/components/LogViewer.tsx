@@ -94,6 +94,9 @@ export function LogViewer() {
                   {run.finishedAt && (
                     <>
                       <span className="text-green-700 font-medium">{run.successfulItems} ok</span>
+                      {run.noChangeItems > 0 && (
+                        <span className="text-zinc-500 font-medium">{run.noChangeItems} no change</span>
+                      )}
                       {run.failedItems > 0 && (
                         <span className="text-red-600 font-medium">{run.failedItems} failed</span>
                       )}

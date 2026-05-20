@@ -143,7 +143,7 @@ export async function POST(req: NextRequest) {
       if (i < items.length - 1) await sleep(API_DELAY_MS);
     }
 
-    finishOperationRun(operationId, { successfulItems: successful, failedItems: failed });
+    finishOperationRun(operationId, { successfulItems: successful, noChangeItems: 0, failedItems: failed });
     console.log(`🏁 Flyer fanout complete: ${successful} uploaded, ${failed} failed`);
     send({ type: 'complete', total: items.length, successful, failed, noChange: 0, results });
   });
