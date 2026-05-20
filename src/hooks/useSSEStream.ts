@@ -22,17 +22,18 @@ export function useSSEStream(onEvent: (event: SSEEvent) => void): UseSSEStreamRe
   }, []);
 
   const startStream = useCallback(
-    async (url: string, body: unknown) => {
+    async (url: string, body: FormData | unknown) => {
       abortRef.current?.abort();
       const controller = new AbortController();
       abortRef.current = controller;
       setStatus('streaming');
 
+      const isFormData = body instanceof FormData;
       try {
         const res = await fetch(url, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
+          headers: isFormData ? {} : { 'Content-Type': 'application/json' },
+          body: isFormData ? body : JSON.stringify(body),
           signal: controller.signal,
         });
 

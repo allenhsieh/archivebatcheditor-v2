@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { SearchSection } from './SearchSection';
 import { ItemSelector } from './ItemSelector';
 import { MetadataEditor } from './editors/MetadataEditor';
+import { BatchImageUpload } from './editors/BatchImageUpload';
 import { LogViewer } from './LogViewer';
 import { useUIStore } from '@/stores/ui';
 
@@ -37,6 +38,7 @@ export function MainView() {
         )}
 
         {selectedCount > 0 && <MetadataEditor />}
+        {selectedCount > 0 && <BatchImageUpload />}
 
         <LogViewer />
       </main>

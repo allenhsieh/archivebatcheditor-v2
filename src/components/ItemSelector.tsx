@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { ArchiveItem } from '@/types';
 import type { FetchMode } from './MainView';
@@ -35,7 +35,7 @@ async function fetchItems(mode: FetchMode): Promise<ItemsResponse> {
 }
 
 export function ItemSelector({ mode, onLoadingChange }: ItemSelectorProps) {
-  const { selectedIdentifiers, toggleSelection, selectAll, clearSelection } =
+  const { selectedIdentifiers, toggleSelection, selectAll, clearSelection, setItemsCache } =
     useUIStore();
 
   const queryKey =
@@ -52,8 +52,12 @@ export function ItemSelector({ mode, onLoadingChange }: ItemSelectorProps) {
     onLoadingChange(isLoading);
   }, [isLoading, onLoadingChange]);
 
-  const items = data?.items ?? [];
+  const items = useMemo(() => data?.items ?? [], [data]);
   const selectedCount = selectedIdentifiers.size;
+
+  useEffect(() => {
+    if (items.length > 0) setItemsCache(items);
+  }, [items, setItemsCache]);
 
   if (isLoading) {
     return (
