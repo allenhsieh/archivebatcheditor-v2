@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useUIStore } from '@/stores/ui';
+import { useLogStore } from '@/stores/log';
 import { useSSEStream } from '@/hooks/useSSEStream';
 import type { SSEEvent, SSECompleteEvent } from '@/lib/sse';
 
@@ -18,6 +19,7 @@ function isSSECompleteEvent(e: SSEEvent): e is SSECompleteEvent {
 export function BatchImageUpload() {
   const { selectedIdentifiers, itemsCache } = useUIStore();
   const queryClient = useQueryClient();
+  const addLine = useLogStore((s) => s.addLine);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [file, setFile] = useState<File | null>(null);
@@ -34,12 +36,23 @@ export function BatchImageUpload() {
           ...prev,
           [event.identifier]: { status: event.status as ItemProgress['status'], error: event.error },
         }));
+        if (event.status === 'completed') {
+          addLine({ type: 'success', message: 'Flyer uploaded', identifier: event.identifier });
+        } else if (event.status === 'error') {
+          addLine({ type: 'error', message: event.error ?? 'Upload failed', identifier: event.identifier });
+        }
       } else if (isSSECompleteEvent(event)) {
         setSummary(event);
+        addLine({
+          type: 'info',
+          message: `Flyer fanout complete — ${event.successful} uploaded, ${event.failed} failed`,
+        });
         void queryClient.invalidateQueries({ queryKey: ['activity-log'] });
+      } else if (event.type === 'start') {
+        addLine({ type: 'info', message: `Starting flyer fanout to ${event.total} item${event.total !== 1 ? 's' : ''}…` });
       }
     },
-    [queryClient]
+    [queryClient, addLine]
   );
 
   const { status, startStream, cancel } = useSSEStream(handleEvent);

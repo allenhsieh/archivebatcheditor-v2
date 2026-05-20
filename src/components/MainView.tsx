@@ -6,6 +6,7 @@ import { ItemSelector } from './ItemSelector';
 import { MetadataEditor } from './editors/MetadataEditor';
 import { BatchImageUpload } from './editors/BatchImageUpload';
 import { LogViewer } from './LogViewer';
+import { LiveLog } from './LiveLog';
 import { YouTubeSection } from './YouTubeSection';
 import { useUIStore } from '@/stores/ui';
 
@@ -42,6 +43,7 @@ export function MainView() {
         {selectedCount > 0 && <BatchImageUpload />}
 
         <YouTubeSection />
+        <LiveLog />
         <LogViewer />
       </main>
     </div>

@@ -87,6 +87,7 @@ export async function POST(req: NextRequest) {
       parameters: { originalFilename: file.name, fileType: file.type, fileSize: file.size },
     });
 
+    console.log(`🔄 Flyer fanout started: ${items.length} item(s), file "${file.name}", operation ${operationId}`);
     send({ type: 'start', total: items.length, operationId });
 
     let successful = 0;
@@ -127,12 +128,14 @@ export async function POST(req: NextRequest) {
 
         successful++;
         addActivityLogEntry({ operationRunId: operationId, identifier: item.identifier, status: 'success', message: filename });
+        console.log(`✅ ${item.identifier}: flyer uploaded as ${filename}`);
         send({ type: 'progress', current: i + 1, total: items.length, identifier: item.identifier, status: 'completed' });
         results.push({ identifier: item.identifier, success: true });
       } catch (error) {
         failed++;
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         addActivityLogEntry({ operationRunId: operationId, identifier: item.identifier, status: 'failure', errorMessage });
+        console.error(`❌ ${item.identifier}: ${errorMessage}`);
         send({ type: 'progress', current: i + 1, total: items.length, identifier: item.identifier, status: 'error', error: errorMessage });
         results.push({ identifier: item.identifier, success: false, error: errorMessage });
       }
@@ -141,6 +144,7 @@ export async function POST(req: NextRequest) {
     }
 
     finishOperationRun(operationId, { successfulItems: successful, failedItems: failed });
+    console.log(`🏁 Flyer fanout complete: ${successful} uploaded, ${failed} failed`);
     send({ type: 'complete', total: items.length, successful, failed, noChange: 0, results });
   });
 

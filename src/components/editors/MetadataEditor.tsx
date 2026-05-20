@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useUIStore } from '@/stores/ui';
+import { useLogStore } from '@/stores/log';
 import { useSSEStream } from '@/hooks/useSSEStream';
 import type { SSEEvent, SSEProgressEvent, SSECompleteEvent } from '@/lib/sse';
 
@@ -35,6 +36,7 @@ function isSSECompleteEvent(e: SSEEvent): e is SSECompleteEvent {
 export function MetadataEditor() {
   const { selectedIdentifiers } = useUIStore();
   const queryClient = useQueryClient();
+  const addLine = useLogStore((s) => s.addLine);
 
   const [field, setField] = useState(COMMON_FIELDS[0].value);
   const [customField, setCustomField] = useState('');
@@ -53,11 +55,24 @@ export function MetadataEditor() {
         ...prev,
         [event.identifier]: { status: event.status, error: event.error },
       }));
+      if (event.status === 'completed') {
+        addLine({ type: 'success', message: `Metadata updated`, identifier: event.identifier });
+      } else if (event.status === 'error') {
+        addLine({ type: 'error', message: event.error ?? 'Update failed', identifier: event.identifier });
+      } else if (event.status === 'no_change') {
+        addLine({ type: 'no_change', message: 'Already up to date', identifier: event.identifier });
+      }
     } else if (isSSECompleteEvent(event)) {
       setSummary(event);
+      addLine({
+        type: 'info',
+        message: `Metadata update complete — ${event.successful} updated, ${event.failed} failed${event.noChange > 0 ? `, ${event.noChange} no change` : ''}`,
+      });
       void queryClient.invalidateQueries({ queryKey: ['activity-log'] });
+    } else if (event.type === 'start') {
+      addLine({ type: 'info', message: `Starting metadata update for ${event.total} item${event.total !== 1 ? 's' : ''}…` });
     }
-  }, [queryClient]);
+  }, [queryClient, addLine]);
 
   const { status, startStream, cancel } = useSSEStream(handleEvent);
   const isRunning = status === 'streaming';

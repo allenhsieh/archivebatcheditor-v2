@@ -47,6 +47,7 @@ export async function POST(req: NextRequest) {
       parameters: { updates },
     });
 
+    console.log(`🔄 Metadata update started: ${items.length} item(s), operation ${operationId}`);
     send({ type: 'start', total: items.length, operationId });
 
     let successful = 0;
@@ -70,11 +71,13 @@ export async function POST(req: NextRequest) {
         if (result.noChanges) {
           noChange++;
           addActivityLogEntry({ operationRunId: operationId, identifier, status: 'no_change', message: 'Already up to date' });
+          console.log(`⏭  ${identifier}: no changes needed`);
           send({ type: 'progress', current: i + 1, total: items.length, identifier, status: 'no_change' });
           results.push({ identifier, success: true, noChange: true });
         } else {
           successful++;
           addActivityLogEntry({ operationRunId: operationId, identifier, status: 'success' });
+          console.log(`✅ ${identifier}: metadata updated`);
           send({ type: 'progress', current: i + 1, total: items.length, identifier, status: 'completed' });
           results.push({ identifier, success: true });
         }
@@ -82,6 +85,7 @@ export async function POST(req: NextRequest) {
         failed++;
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         addActivityLogEntry({ operationRunId: operationId, identifier, status: 'failure', errorMessage });
+        console.error(`❌ ${identifier}: ${errorMessage}`);
         send({ type: 'progress', current: i + 1, total: items.length, identifier, status: 'error', error: errorMessage });
         results.push({ identifier, success: false, error: errorMessage });
       }
@@ -90,6 +94,7 @@ export async function POST(req: NextRequest) {
     }
 
     finishOperationRun(operationId, { successfulItems: successful + noChange, failedItems: failed });
+    console.log(`🏁 Metadata update complete: ${successful} updated, ${noChange} no change, ${failed} failed`);
     send({ type: 'complete', total: items.length, successful, failed, noChange, results });
   });
 

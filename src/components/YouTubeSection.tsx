@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useLogStore } from '@/stores/log';
 
 interface AuthStatus {
   authenticated: boolean;
@@ -36,6 +37,7 @@ async function triggerCacheRefresh(): Promise<{ videoCount: number }> {
 
 export function YouTubeSection() {
   const qc = useQueryClient();
+  const addLine = useLogStore((s) => s.addLine);
 
   const { data: auth } = useQuery({
     queryKey: ['youtube-auth-status'],
@@ -51,8 +53,15 @@ export function YouTubeSection() {
 
   const refresh = useMutation({
     mutationFn: triggerCacheRefresh,
-    onSuccess: () => {
+    onMutate: () => {
+      addLine({ type: 'info', message: 'Refreshing YouTube channel cache…' });
+    },
+    onSuccess: (data) => {
+      addLine({ type: 'success', message: `YouTube cache refreshed — ${data.videoCount} videos cached` });
       void qc.invalidateQueries({ queryKey: ['youtube-cache-status'] });
+    },
+    onError: (error) => {
+      addLine({ type: 'error', message: `Cache refresh failed: ${error instanceof Error ? error.message : 'Unknown error'}` });
     },
   });
 
