@@ -5,6 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useUIStore } from '@/stores/ui';
 import { useLogStore } from '@/stores/log';
 import { useSSEStream } from '@/hooks/useSSEStream';
+import { extractVideoIdFromUrl } from '@/lib/youtube/urls';
 import type { SSEEvent, SSECompleteEvent } from '@/lib/sse';
 
 function isSSECompleteEvent(e: SSEEvent): e is SSECompleteEvent {
@@ -28,14 +29,17 @@ export function YouTubeTagsSync() {
   const addLine = useLogStore((s) => s.addLine);
 
   const updatable = Array.from(selectedIdentifiers)
-    .filter((id) => youtubeMatches.has(id))
     .map((id) => {
       const meta = itemsCache.get(id);
-      const videoId = youtubeMatches.get(id)!;
+      const videoId =
+        youtubeMatches.get(id) ??
+        (typeof meta?.youtube === 'string' ? extractVideoIdFromUrl(meta.youtube) : null);
       const tags = normalizeSubjects(meta?.subject);
       return { identifier: id, videoId, tags };
     })
-    .filter((u) => u.tags.length > 0);
+    .filter((u): u is { identifier: string; videoId: string; tags: string[] } =>
+      u.videoId !== null && u.tags.length > 0
+    );
 
   const handleEvent = useCallback(
     (event: SSEEvent) => {
