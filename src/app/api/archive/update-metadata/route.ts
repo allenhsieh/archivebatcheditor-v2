@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { createSSEStream, sseHeaders } from '@/lib/sse';
 import { updateMetadata, getItemMetadata, API_DELAY_MS } from '@/lib/archive/client';
 import { createOperationRun, finishOperationRun, addActivityLogEntry } from '@/lib/activityLog';
+import { planPatches } from '@/lib/archive/patchPlanner';
 import type { ArchiveItem } from '@/types';
 
 const MetadataUpdateSchema = z.object({
@@ -17,42 +18,8 @@ const RequestSchema = z.object({
   dryRun: z.boolean().optional().default(false),
 });
 
-type Update = z.infer<typeof MetadataUpdateSchema>;
-
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-// Returns only the subset of updates that would actually change the item's metadata,
-// preventing "value already exists" failures and needless writes.
-function filterRedundantUpdates(updates: Update[], current: ArchiveItem): Update[] {
-  return updates.filter((u) => {
-    const currentVal = current[u.field];
-
-    if (u.operation === 'replace') {
-      if (typeof currentVal === 'string') return currentVal !== u.value;
-      if (Array.isArray(currentVal)) {
-        // replace on an array field sets it to a single value — skip only if it's already the sole value
-        return !(currentVal.length === 1 && currentVal[0] === u.value);
-      }
-      return true; // field absent — apply
-    }
-
-    if (u.operation === 'add') {
-      if (typeof currentVal === 'string') return currentVal !== u.value;
-      if (Array.isArray(currentVal)) return !currentVal.includes(u.value);
-      return true; // field absent — apply
-    }
-
-    if (u.operation === 'remove') {
-      if (!currentVal) return false; // nothing to remove
-      if (typeof currentVal === 'string') return currentVal === u.value;
-      if (Array.isArray(currentVal)) return currentVal.includes(u.value);
-      return false;
-    }
-
-    return true;
-  });
 }
 
 export async function POST(req: NextRequest) {
@@ -103,20 +70,24 @@ export async function POST(req: NextRequest) {
       send({ type: 'progress', current: i + 1, total: items.length, identifier, status: 'processing' });
 
       try {
-        // Pre-read: fetch current metadata and filter out patches that would be no-ops.
-        // This prevents "value already exists" 400s from aborting the whole patch.
-        let activePatchOps = updates;
+        // Pre-read current metadata so planPatches can both filter no-ops AND
+        // coerce replace→add when the target field is missing (Archive.org's
+        // RFC 6902 enforcement returns 400 for replace on absent path).
+        let plannedPatches: ReturnType<typeof planPatches> = [];
         let preReadSucceeded = false;
         let currentMeta: ArchiveItem | null = null;
         try {
           currentMeta = await getItemMetadata(identifier);
-          activePatchOps = filterRedundantUpdates(updates, currentMeta);
+          plannedPatches = planPatches(updates, currentMeta);
           preReadSucceeded = true;
         } catch {
-          // Pre-read failed — proceed with all patches and let Archive.org decide
+          // Pre-read failed — send patches as-is and let Archive.org decide.
+          // This branch loses the replace→add coercion, but a failed pre-read
+          // is the exceptional case (network blip), not the normal path.
+          plannedPatches = updates.map((u) => ({ op: u.operation, path: `/${u.field}`, value: u.value }));
         }
 
-        if (activePatchOps.length === 0) {
+        if (plannedPatches.length === 0) {
           noChange++;
           if (!dryRun) {
             addActivityLogEntry({ operationRunId: operationId, identifier, status: 'no_change', message: 'Already up to date' });
@@ -125,21 +96,20 @@ export async function POST(req: NextRequest) {
           send({ type: 'progress', current: i + 1, total: items.length, identifier, status: 'no_change', message: 'Already up to date' });
           results.push({ identifier, success: true, noChange: true });
         } else if (dryRun) {
-          // Dry-run: report would-change without writing
           successful++;
           const diffMsg = preReadSucceeded && currentMeta !== null
-            ? activePatchOps.map((u) => {
-                const cur = currentMeta![u.field];
+            ? plannedPatches.map((p) => {
+                const field = p.path.replace(/^\//, '');
+                const cur = currentMeta![field];
                 const curStr = Array.isArray(cur) ? cur.join(', ') : (typeof cur === 'string' ? cur : '(none)');
-                return `${u.field}: ${curStr} → ${u.value}`;
+                return `${field}: ${curStr} → ${p.value}`;
               }).join('; ')
-            : activePatchOps.map((u) => `${u.field} → ${u.value}`).join('; ');
+            : plannedPatches.map((p) => `${p.path.replace(/^\//, '')} → ${p.value}`).join('; ');
           console.log(`🔍 ${identifier}: would update — ${diffMsg}`);
           send({ type: 'progress', current: i + 1, total: items.length, identifier, status: 'completed', message: diffMsg });
           results.push({ identifier, success: true });
         } else {
-          const patches = activePatchOps.map((u) => ({ op: u.operation, path: `/${u.field}`, value: u.value }));
-          const result = await updateMetadata(identifier, patches);
+          const result = await updateMetadata(identifier, plannedPatches);
 
           if (result.noChanges) {
             noChange++;
@@ -149,9 +119,9 @@ export async function POST(req: NextRequest) {
             results.push({ identifier, success: true, noChange: true });
           } else {
             successful++;
-            const fieldSummary = activePatchOps.map((u) => `${u.operation} ${u.field}=${u.value}`).join('; ');
+            const fieldSummary = plannedPatches.map((p) => `${p.op} ${p.path.replace(/^\//, '')}=${p.value}`).join('; ');
             addActivityLogEntry({ operationRunId: operationId, identifier, status: 'success', message: fieldSummary });
-            console.log(`✅ ${identifier}: metadata updated (${activePatchOps.length} field${activePatchOps.length !== 1 ? 's' : ''})`);
+            console.log(`✅ ${identifier}: metadata updated (${plannedPatches.length} field${plannedPatches.length !== 1 ? 's' : ''})`);
             send({ type: 'progress', current: i + 1, total: items.length, identifier, status: 'completed' });
             results.push({ identifier, success: true });
           }
