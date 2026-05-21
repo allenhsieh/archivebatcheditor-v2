@@ -149,7 +149,8 @@ export async function POST(req: NextRequest) {
             results.push({ identifier, success: true, noChange: true });
           } else {
             successful++;
-            addActivityLogEntry({ operationRunId: operationId, identifier, status: 'success' });
+            const fieldSummary = activePatchOps.map((u) => `${u.operation} ${u.field}=${u.value}`).join('; ');
+            addActivityLogEntry({ operationRunId: operationId, identifier, status: 'success', message: fieldSummary });
             console.log(`✅ ${identifier}: metadata updated (${activePatchOps.length} field${activePatchOps.length !== 1 ? 's' : ''})`);
             send({ type: 'progress', current: i + 1, total: items.length, identifier, status: 'completed' });
             results.push({ identifier, success: true });

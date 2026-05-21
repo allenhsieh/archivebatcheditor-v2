@@ -197,14 +197,16 @@ export function LogViewer() {
                   {/* Entry list */}
                   <ul className="max-h-56 overflow-y-auto space-y-0.5">
                     {entries.map((entry) => (
-                      <li key={entry.id} className="flex items-start gap-2 py-0.5 text-xs">
-                        <EntryStatusBadge status={entry.status} />
-                        <span className="font-mono text-zinc-700 truncate">{entry.identifier}</span>
+                      <li key={entry.id} className="flex flex-col gap-0.5 py-0.5 text-xs">
+                        <div className="flex items-center gap-2">
+                          <EntryStatusBadge status={entry.status} />
+                          <span className="font-mono text-zinc-700 truncate">{entry.identifier}</span>
+                        </div>
                         {entry.errorMessage && (
-                          <span className="text-red-600 truncate">{entry.errorMessage}</span>
+                          <span className="pl-7 text-red-600">{entry.errorMessage}</span>
                         )}
                         {entry.message && !entry.errorMessage && (
-                          <span className="text-zinc-400">{entry.message}</span>
+                          <span className="pl-7 text-zinc-400">{entry.message}</span>
                         )}
                       </li>
                     ))}

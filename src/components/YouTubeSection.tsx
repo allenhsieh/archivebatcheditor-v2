@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLogStore } from '@/stores/log';
 
@@ -38,6 +38,7 @@ async function triggerCacheRefresh(): Promise<{ videoCount: number }> {
 export function YouTubeSection() {
   const qc = useQueryClient();
   const addLine = useLogStore((s) => s.addLine);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   const { data: auth } = useQuery({
     queryKey: ['youtube-auth-status'],
@@ -65,19 +66,46 @@ export function YouTubeSection() {
     },
   });
 
-  // Surface re-auth CTA when youtube_auth=success query param appears
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
-    if (params.get('youtube_auth') === 'success') {
+    const result = params.get('youtube_auth');
+    if (result === 'success') {
       void qc.invalidateQueries({ queryKey: ['youtube-auth-status'] });
+      window.history.replaceState({}, '', '/');
+    } else if (result === 'error') {
+      const reason = params.get('reason') ?? 'OAuth failed';
+      setAuthError(reason);
       window.history.replaceState({}, '', '/');
     }
   }, [qc]);
 
   if (!auth?.configured) return null;
 
+  const needsRevoke = authError?.includes('No refresh token') || authError?.includes('refresh_token');
+
   return (
+    <div className="flex flex-col gap-2">
+    {authError && (
+      <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+        <span className="font-medium">YouTube auth failed: </span>{authError}
+        {needsRevoke && (
+          <span>
+            {' '}—{' '}
+            <a
+              href="https://myaccount.google.com/permissions"
+              target="_blank"
+              rel="noreferrer"
+              className="underline hover:no-underline"
+            >
+              Revoke the app at Google
+            </a>
+            {' '}then try again.
+          </span>
+        )}
+        <button onClick={() => setAuthError(null)} className="ml-3 opacity-50 hover:opacity-100">×</button>
+      </div>
+    )}
     <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -130,6 +158,7 @@ export function YouTubeSection() {
           )}
         </div>
       </div>
+    </div>
     </div>
   );
 }
