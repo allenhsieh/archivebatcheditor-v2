@@ -22,6 +22,10 @@ const RequestSchema = z.object({
   find: z.string().min(1),
   replace: z.string(),
   caseInsensitive: z.boolean().optional().default(false),
+  // When true, any line containing the match is removed entirely (with its
+  // trailing newline). Useful for catching variations like "please visit
+  // ilovescifi.net" / "As always, http://www.ilovescifi.net" with one pattern.
+  removeWholeLine: z.boolean().optional().default(false),
 });
 
 function sleep(ms: number): Promise<void> {
@@ -51,8 +55,15 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const { videoIds, find, replace, caseInsensitive } = parsed.data;
-  const finder = new RegExp(escapeRegex(find), caseInsensitive ? 'gi' : 'g');
+  const { videoIds, find, replace, caseInsensitive, removeWholeLine } = parsed.data;
+  const flags = (caseInsensitive ? 'i' : '') + 'g';
+  // Substring mode: just replace the matched chars.
+  // Line mode: match the line (any chars except CR/LF) that contains the find,
+  //   plus its trailing line break. We then collapse runs of blank lines so
+  //   removing a middle line doesn't leave a double-blank gap.
+  const finder = removeWholeLine
+    ? new RegExp(`^[^\\r\\n]*${escapeRegex(find)}[^\\r\\n]*(?:\\r?\\n)?`, 'm' + flags)
+    : new RegExp(escapeRegex(find), flags);
 
   const stream = createSSEStream(async (send) => {
     const operationId = createOperationRun({
@@ -99,7 +110,12 @@ export async function POST(req: NextRequest) {
         if (!existing) throw new Error('Video not found or not owned by authenticated account');
 
         const oldDesc = existing.description ?? '';
-        const newDesc = oldDesc.replace(finder, replace);
+        let newDesc = oldDesc.replace(finder, replace);
+        if (removeWholeLine) {
+          // Collapse 3+ consecutive newlines down to 2, then trim leading/trailing
+          // whitespace — the line-removal pattern leaves visible gaps otherwise.
+          newDesc = newDesc.replace(/(\r?\n){3,}/g, '\n\n').replace(/^\s+|\s+$/g, '');
+        }
 
         if (newDesc === oldDesc) {
           noChange++;
@@ -136,7 +152,10 @@ export async function POST(req: NextRequest) {
             .run();
 
           successful++;
-          addActivityLogEntry({ operationRunId: operationId, identifier: videoId, status: 'success', message: `Replaced "${find}"${caseInsensitive ? ' (i)' : ''}` });
+          const summary = removeWholeLine
+            ? `Removed line(s) containing "${find}"${caseInsensitive ? ' (i)' : ''}`
+            : `Replaced "${find}"${caseInsensitive ? ' (i)' : ''}`;
+          addActivityLogEntry({ operationRunId: operationId, identifier: videoId, status: 'success', message: summary });
           console.log(`📝 ✅ yt:${videoId}: cleaned description`);
           send({ type: 'progress', current: i + 1, total: videoIds.length, identifier: videoId, status: 'completed' });
           results.push({ identifier: videoId, success: true });

@@ -44,6 +44,7 @@ export function YouTubeDescriptionCleanup() {
   const [find, setFind] = useState('');
   const [replace, setReplace] = useState('');
   const [caseInsensitive, setCaseInsensitive] = useState(true);
+  const [removeWholeLine, setRemoveWholeLine] = useState(false);
   const [matches, setMatches] = useState<MatchRow[]>([]);
   const [searched, setSearched] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -121,6 +122,7 @@ export function YouTubeDescriptionCleanup() {
       find,
       replace,
       caseInsensitive,
+      removeWholeLine,
     });
   }
 
@@ -155,12 +157,13 @@ export function YouTubeDescriptionCleanup() {
             value={replace}
             onChange={(e) => setReplace(e.target.value)}
             placeholder="(empty)"
-            className="rounded-md border border-zinc-700 px-3 py-2 text-sm outline-none focus:border-zinc-400 focus:ring-1 focus:ring-zinc-400"
+            disabled={removeWholeLine}
+            className="rounded-md border border-zinc-700 px-3 py-2 text-sm outline-none focus:border-zinc-400 focus:ring-1 focus:ring-zinc-400 disabled:opacity-40"
           />
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-4">
         <label className="flex items-center gap-1.5 cursor-pointer select-none">
           <input
             type="checkbox"
@@ -169,6 +172,17 @@ export function YouTubeDescriptionCleanup() {
             className="h-3.5 w-3.5 rounded border-zinc-700 accent-blue-500"
           />
           <span className="text-xs text-zinc-400">Case-insensitive</span>
+        </label>
+        <label className="flex items-center gap-1.5 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={removeWholeLine}
+            onChange={(e) => setRemoveWholeLine(e.target.checked)}
+            className="h-3.5 w-3.5 rounded border-zinc-700 accent-blue-500"
+          />
+          <span className="text-xs text-zinc-400" title="Remove the entire line containing the match instead of just the substring">
+            Remove whole line containing match
+          </span>
         </label>
         <button
           onClick={() => void search()}
