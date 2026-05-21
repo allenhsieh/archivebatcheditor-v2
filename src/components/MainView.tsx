@@ -67,28 +67,36 @@ export function MainView() {
           isLoading={isLoading}
         />
 
-        {/* When a selection exists, items stay in their column and the tools
-            slide in as a sticky side panel — no vertical jump on first select. */}
+        {/* The items + tools layout is always two columns once items are loaded.
+            Items column has a fixed proportional width so it never resizes when
+            the tools slide in — only the right-hand sidebar contents change. */}
         {mode.type !== 'idle' && (
-          <div
-            className={
-              selectedCount > 0
-                ? 'grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(380px,38%)]'
-                : ''
-            }
-          >
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(380px,38%)]">
             <ItemSelector mode={mode} onLoadingChange={setIsLoading} />
 
-            {selectedCount > 0 && (
-              <aside className="flex flex-col gap-4 lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto lg:pr-1">
-                <MetadataEditor />
-                <BatchImageUpload />
-                <YouTubeMatcher />
-                <YouTubeRecordingDateEditor />
-                <YouTubeTagsSync />
-                <YouTubeDescriptionSync />
-              </aside>
-            )}
+            <aside className="flex flex-col gap-4 lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto lg:pr-1">
+              {selectedCount > 0 ? (
+                <>
+                  <MetadataEditor />
+                  <BatchImageUpload />
+                  <YouTubeMatcher />
+                  <YouTubeRecordingDateEditor />
+                  <YouTubeTagsSync />
+                  <YouTubeDescriptionSync />
+                </>
+              ) : (
+                <div className="rounded-lg border border-dashed border-zinc-800 bg-zinc-900/50 p-6 text-sm text-zinc-500">
+                  <p className="font-medium text-zinc-300">No items selected</p>
+                  <p className="mt-1">
+                    Click an item card to select it. Editor tools (metadata, flyer
+                    upload, YouTube sync) will appear here.
+                  </p>
+                  <p className="mt-2 text-xs text-zinc-500">
+                    Shortcuts: ⌘A select all · Esc clear
+                  </p>
+                </div>
+              )}
+            </aside>
           </div>
         )}
 
