@@ -91,7 +91,7 @@ export function YouTubeSection() {
   return (
     <div className="flex flex-col gap-2">
     {authError && (
-      <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+      <div className="rounded-lg border border-red-900 bg-red-950/40 px-4 py-3 text-sm text-red-300">
         <span className="font-medium">YouTube auth failed: </span>{authError}
         {needsRevoke && (
           <span>
@@ -110,17 +110,17 @@ export function YouTubeSection() {
         <button onClick={() => setAuthError(null)} className="ml-3 opacity-50 hover:opacity-100">×</button>
       </div>
     )}
-    <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
+    <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4 shadow-sm">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <h2 className="text-sm font-semibold text-zinc-900">YouTube</h2>
+          <h2 className="text-sm font-semibold text-zinc-100">YouTube</h2>
 
           {auth.authenticated ? (
-            <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+            <span className="rounded-full bg-green-900/40 px-2 py-0.5 text-xs font-medium text-green-300">
               Connected
             </span>
           ) : (
-            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+            <span className="rounded-full bg-amber-900/40 px-2 py-0.5 text-xs font-medium text-amber-300">
               {auth.revoked ? 'Token revoked — re-authorize' : 'Not connected'}
             </span>
           )}
@@ -139,7 +139,7 @@ export function YouTubeSection() {
           {auth.authenticated && (
             <div className="flex items-center gap-3">
               {cache && (
-                <span className="text-xs text-zinc-500">
+                <span className="text-xs text-zinc-400">
                   {cache.videoCount > 0
                     ? `${cache.videoCount} videos cached${cache.lastFetchedAt ? ` · ${formatDate(new Date(cache.lastFetchedAt))}` : ''}`
                     : 'Cache empty'}
@@ -148,15 +148,15 @@ export function YouTubeSection() {
               <button
                 onClick={() => refresh.mutate()}
                 disabled={refresh.isPending}
-                className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50"
+                className="rounded-md border border-zinc-700 px-3 py-1.5 text-xs font-medium text-zinc-300 transition-colors hover:bg-zinc-950 disabled:opacity-50"
               >
                 {refresh.isPending ? 'Refreshing…' : 'Refresh cache'}
               </button>
               {refresh.isError && (
-                <span className="text-xs text-red-600">{(refresh.error as Error).message}</span>
+                <span className="text-xs text-red-400">{(refresh.error as Error).message}</span>
               )}
               {refresh.isSuccess && (
-                <span className="text-xs text-green-600">{refresh.data.videoCount} videos cached</span>
+                <span className="text-xs text-green-400">{refresh.data.videoCount} videos cached</span>
               )}
             </div>
           )}

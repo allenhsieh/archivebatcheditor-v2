@@ -69,20 +69,20 @@ export function YouTubeDescriptionSync() {
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
+    <div className="flex flex-col gap-3 rounded-lg border border-zinc-800 bg-zinc-900 p-4 shadow-sm">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-zinc-900">YouTube Description Sync</h2>
-        <p className="text-xs text-zinc-400">Pushes Archive.org description → YouTube video description</p>
+        <h2 className="text-sm font-semibold text-zinc-100">YouTube Description Sync</h2>
+        <p className="text-xs text-zinc-500">Pushes Archive.org description → YouTube video description</p>
       </div>
 
-      <div className="text-xs text-zinc-500">
+      <div className="text-xs text-zinc-400">
         {updatable.length} matched item{updatable.length !== 1 ? 's' : ''} with descriptions ready to push
       </div>
 
       <button
         onClick={apply}
         disabled={isRunning}
-        className="w-fit rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
+        className="w-fit rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {isRunning ? 'Pushing…' : `Push descriptions to ${updatable.length} video${updatable.length !== 1 ? 's' : ''}`}
       </button>

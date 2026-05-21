@@ -100,27 +100,27 @@ export function BatchImageUpload() {
   const progressEntries = Object.entries(progress);
 
   return (
-    <div className="flex flex-col gap-4 rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
-      <h2 className="text-sm font-semibold text-zinc-900">Upload Flyer</h2>
-      <p className="text-xs text-zinc-500">
+    <div className="flex flex-col gap-4 rounded-lg border border-zinc-800 bg-zinc-900 p-4 shadow-sm">
+      <h2 className="text-sm font-semibold text-zinc-100">Upload Flyer</h2>
+      <p className="text-xs text-zinc-400">
         Upload one image — it will be set as the cover/thumbnail on all {selectedList.length} selected item{selectedList.length !== 1 ? 's' : ''}.
       </p>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-zinc-600">Image file</label>
+          <label className="text-xs font-medium text-zinc-400">Image file</label>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={isRunning}
-              className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50"
+              className="rounded-md border border-zinc-700 px-3 py-2 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-950 disabled:opacity-50"
             >
               {file ? 'Change file' : 'Choose file…'}
             </button>
             {file && (
-              <span className="text-sm text-zinc-600 truncate max-w-xs">
-                {file.name} <span className="text-zinc-400">({(file.size / 1024).toFixed(0)} KB)</span>
+              <span className="text-sm text-zinc-400 truncate max-w-xs">
+                {file.name} <span className="text-zinc-500">({(file.size / 1024).toFixed(0)} KB)</span>
               </span>
             )}
           </div>
@@ -131,14 +131,14 @@ export function BatchImageUpload() {
             onChange={handleFileChange}
             className="sr-only"
           />
-          {fileError && <p className="text-xs text-red-600">{fileError}</p>}
+          {fileError && <p className="text-xs text-red-400">{fileError}</p>}
         </div>
 
         <div className="flex gap-2">
           <button
             onClick={handleStart}
             disabled={!file || isRunning || selectedList.length === 0}
-            className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isRunning
               ? 'Uploading…'
@@ -147,7 +147,7 @@ export function BatchImageUpload() {
           {isRunning && (
             <button
               onClick={cancel}
-              className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+              className="rounded-md border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-950"
             >
               Cancel
             </button>
@@ -156,16 +156,16 @@ export function BatchImageUpload() {
       </div>
 
       {progressEntries.length > 0 && (
-        <div className="flex flex-col gap-1 rounded-md border border-zinc-100 bg-zinc-50 p-3">
-          <div className="mb-1 text-xs font-medium text-zinc-500">
+        <div className="flex flex-col gap-1 rounded-md border border-zinc-800 bg-zinc-950 p-3">
+          <div className="mb-1 text-xs font-medium text-zinc-400">
             {progressEntries.length} / {selectedList.length} processed
           </div>
           <ul className="max-h-48 overflow-y-auto space-y-0.5">
             {progressEntries.map(([id, p]) => (
               <li key={id} className="flex items-center gap-2 text-xs">
                 <ProgressDot status={p.status} />
-                <span className="truncate font-mono text-zinc-700">{id}</span>
-                {p.error && <span className="text-red-600 truncate">{p.error}</span>}
+                <span className="truncate font-mono text-zinc-300">{id}</span>
+                {p.error && <span className="text-red-400 truncate">{p.error}</span>}
               </li>
             ))}
           </ul>
@@ -173,11 +173,11 @@ export function BatchImageUpload() {
       )}
 
       {summary && (
-        <div className="rounded-md border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm">
-          <span className="font-medium text-zinc-900">Done: </span>
-          <span className="text-green-700">{summary.successful} uploaded</span>
+        <div className="rounded-md border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm">
+          <span className="font-medium text-zinc-100">Done: </span>
+          <span className="text-green-300">{summary.successful} uploaded</span>
           {summary.failed > 0 && (
-            <span className="text-red-600"> · {summary.failed} failed</span>
+            <span className="text-red-400"> · {summary.failed} failed</span>
           )}
         </div>
       )}

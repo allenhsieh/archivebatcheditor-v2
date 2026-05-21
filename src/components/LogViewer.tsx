@@ -72,12 +72,12 @@ export function LogViewer() {
     .map((e) => e.identifier);
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
+    <div className="flex flex-col gap-3 rounded-lg border border-zinc-800 bg-zinc-900 p-4 shadow-sm">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-zinc-900">Activity Log</h2>
+        <h2 className="text-sm font-semibold text-zinc-100">Activity Log</h2>
         <button
           onClick={() => void refetch()}
-          className="text-xs text-zinc-500 hover:text-zinc-900"
+          className="text-xs text-zinc-400 hover:text-zinc-100"
         >
           Refresh
         </button>
@@ -86,11 +86,11 @@ export function LogViewer() {
       {/* Run-level filters */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-1.5">
-          <span className="text-xs text-zinc-400">Type:</span>
+          <span className="text-xs text-zinc-500">Type:</span>
           <select
             value={opTypeFilter}
             onChange={(e) => setOpTypeFilter(e.target.value as OpTypeFilter)}
-            className="rounded border border-zinc-200 px-2 py-0.5 text-xs text-zinc-700 outline-none focus:border-zinc-400"
+            className="rounded border border-zinc-800 px-2 py-0.5 text-xs text-zinc-300 outline-none focus:border-zinc-500"
           >
             <option value="all">All</option>
             <option value="metadata_update">Metadata Update</option>
@@ -108,8 +108,8 @@ export function LogViewer() {
               className={[
                 'rounded px-2 py-0.5 text-xs font-medium transition-colors',
                 dateFilter === d
-                  ? 'bg-zinc-900 text-white'
-                  : 'text-zinc-500 hover:bg-zinc-100',
+                  ? 'bg-blue-600 text-white'
+                  : 'text-zinc-400 hover:bg-zinc-800',
               ].join(' ')}
             >
               {d === 'all' ? 'All time' : d === 'today' ? 'Today' : 'This week'}
@@ -119,53 +119,53 @@ export function LogViewer() {
       </div>
 
       {isLoading && (
-        <p className="text-sm text-zinc-400">Loading…</p>
+        <p className="text-sm text-zinc-500">Loading…</p>
       )}
 
       {error && (
-        <p className="text-sm text-red-600">Failed to load activity log</p>
+        <p className="text-sm text-red-400">Failed to load activity log</p>
       )}
 
       {!isLoading && runs.length === 0 && (
-        <p className="text-sm text-zinc-400">No operations yet</p>
+        <p className="text-sm text-zinc-500">No operations yet</p>
       )}
 
       <ul className="flex flex-col gap-2">
         {runs.map((run) => {
           const isExpanded = expandedRunId === run.id;
           return (
-            <li key={run.id} className="rounded-md border border-zinc-100">
+            <li key={run.id} className="rounded-md border border-zinc-800">
               <button
                 onClick={() => setExpandedRunId(isExpanded ? null : run.id)}
-                className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left hover:bg-zinc-50"
+                className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left hover:bg-zinc-950"
               >
                 <div className="flex flex-col gap-0.5">
-                  <span className="text-sm font-medium text-zinc-900">
+                  <span className="text-sm font-medium text-zinc-100">
                     {formatOperationType(run.operationType)}
                   </span>
-                  <span className="text-xs text-zinc-400">
+                  <span className="text-xs text-zinc-500">
                     {formatDate(run.startedAt)} · {run.totalItems} items
                   </span>
                 </div>
                 <div className="flex items-center gap-3 text-xs">
                   {run.finishedAt && (
                     <>
-                      <span className="text-green-700 font-medium">{run.successfulItems} ok</span>
+                      <span className="text-green-300 font-medium">{run.successfulItems} ok</span>
                       {run.noChangeItems > 0 && (
-                        <span className="text-zinc-500 font-medium">{run.noChangeItems} no change</span>
+                        <span className="text-zinc-400 font-medium">{run.noChangeItems} no change</span>
                       )}
                       {run.failedItems > 0 && (
-                        <span className="text-red-600 font-medium">{run.failedItems} failed</span>
+                        <span className="text-red-400 font-medium">{run.failedItems} failed</span>
                       )}
                     </>
                   )}
-                  {!run.finishedAt && <span className="text-zinc-400">in progress</span>}
-                  <span className="text-zinc-300">{isExpanded ? '▲' : '▼'}</span>
+                  {!run.finishedAt && <span className="text-zinc-500">in progress</span>}
+                  <span className="text-zinc-600">{isExpanded ? '▲' : '▼'}</span>
                 </div>
               </button>
 
               {isExpanded && (
-                <div className="border-t border-zinc-100 px-3 py-3">
+                <div className="border-t border-zinc-800 px-3 py-3">
                   {/* Filter + retry toolbar */}
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <div className="flex gap-1">
@@ -176,8 +176,8 @@ export function LogViewer() {
                           className={[
                             'rounded px-2 py-0.5 text-xs font-medium transition-colors',
                             statusFilter === s
-                              ? 'bg-zinc-900 text-white'
-                              : 'text-zinc-500 hover:bg-zinc-100',
+                              ? 'bg-blue-600 text-white'
+                              : 'text-zinc-400 hover:bg-zinc-800',
                           ].join(' ')}
                         >
                           {s === 'no_change' ? 'no change' : s}
@@ -187,7 +187,7 @@ export function LogViewer() {
                     {failedIdentifiers.length > 0 && (
                       <button
                         onClick={() => selectAll(failedIdentifiers)}
-                        className="text-xs text-red-600 hover:text-red-800"
+                        className="text-xs text-red-400 hover:text-red-300"
                       >
                         Re-select {failedIdentifiers.length} failed
                       </button>
@@ -200,18 +200,18 @@ export function LogViewer() {
                       <li key={entry.id} className="flex flex-col gap-0.5 py-0.5 text-xs">
                         <div className="flex items-center gap-2">
                           <EntryStatusBadge status={entry.status} />
-                          <span className="font-mono text-zinc-700 truncate">{entry.identifier}</span>
+                          <span className="font-mono text-zinc-300 truncate">{entry.identifier}</span>
                         </div>
                         {entry.errorMessage && (
-                          <span className="pl-7 text-red-600">{entry.errorMessage}</span>
+                          <span className="pl-7 text-red-400">{entry.errorMessage}</span>
                         )}
                         {entry.message && !entry.errorMessage && (
-                          <span className="pl-7 text-zinc-400">{entry.message}</span>
+                          <span className="pl-7 text-zinc-500">{entry.message}</span>
                         )}
                       </li>
                     ))}
                     {entries.length === 0 && entriesData && (
-                      <li className="text-zinc-400 py-1">No entries match this filter</li>
+                      <li className="text-zinc-500 py-1">No entries match this filter</li>
                     )}
                   </ul>
                 </div>
@@ -226,12 +226,12 @@ export function LogViewer() {
 
 function EntryStatusBadge({ status }: { status: string }) {
   const config: Record<string, { label: string; cls: string }> = {
-    success: { label: 'ok', cls: 'bg-green-100 text-green-700' },
-    failure: { label: 'fail', cls: 'bg-red-100 text-red-700' },
-    no_change: { label: '—', cls: 'bg-zinc-100 text-zinc-500' },
-    skipped: { label: 'skip', cls: 'bg-zinc-100 text-zinc-500' },
+    success: { label: 'ok', cls: 'bg-green-900/40 text-green-300' },
+    failure: { label: 'fail', cls: 'bg-red-100 text-red-300' },
+    no_change: { label: '—', cls: 'bg-zinc-800 text-zinc-400' },
+    skipped: { label: 'skip', cls: 'bg-zinc-800 text-zinc-400' },
   };
-  const { label, cls } = config[status] ?? { label: status, cls: 'bg-zinc-100 text-zinc-500' };
+  const { label, cls } = config[status] ?? { label: status, cls: 'bg-zinc-800 text-zinc-400' };
   return (
     <span className={`shrink-0 rounded px-1 py-0.5 font-medium ${cls}`}>{label}</span>
   );

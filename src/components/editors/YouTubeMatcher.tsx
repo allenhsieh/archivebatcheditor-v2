@@ -153,17 +153,17 @@ export function YouTubeMatcher() {
   const acceptedCount = matches.filter((m) => m.match !== null && accepted.has(m.identifier)).length;
 
   return (
-    <div className="flex flex-col gap-4 rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
+    <div className="flex flex-col gap-4 rounded-lg border border-zinc-800 bg-zinc-900 p-4 shadow-sm">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-zinc-900">YouTube Matcher</h2>
-        <p className="text-xs text-zinc-400">Matches from local cache — no API quota used</p>
+        <h2 className="text-sm font-semibold text-zinc-100">YouTube Matcher</h2>
+        <p className="text-xs text-zinc-500">Matches from local cache — no API quota used</p>
       </div>
 
       <div className="flex items-center gap-2">
         <button
           onClick={() => void findMatches()}
           disabled={isFinding || isApplying || selectedList.length === 0}
-          className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isFinding ? 'Finding…' : `Find matches for ${selectedList.length} item${selectedList.length !== 1 ? 's' : ''}`}
         </button>
@@ -172,7 +172,7 @@ export function YouTubeMatcher() {
           <button
             onClick={applyMatches}
             disabled={isApplying}
-            className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50"
+            className="rounded-md border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-950 disabled:opacity-50"
           >
             {isApplying ? 'Applying…' : `Add ${acceptedCount} YouTube link${acceptedCount !== 1 ? 's' : ''} to Archive.org`}
           </button>
@@ -180,18 +180,18 @@ export function YouTubeMatcher() {
       </div>
 
       {findError && (
-        <p className="text-sm text-red-600">{findError}</p>
+        <p className="text-sm text-red-400">{findError}</p>
       )}
 
       {/* Match results */}
       {matches.length > 0 && (
         <div className="flex flex-col gap-1">
-          <div className="mb-1 text-xs font-medium text-zinc-500">
+          <div className="mb-1 text-xs font-medium text-zinc-400">
             {matches.filter((m) => m.match !== null).length} / {matches.length} matched
             {acceptedCount > 0 && ` · ${acceptedCount} accepted`}
           </div>
 
-          <ul className="divide-y divide-zinc-100 rounded-md border border-zinc-100">
+          <ul className="divide-y divide-zinc-100 rounded-md border border-zinc-800">
             {matches.map(({ identifier, match }) => {
               const itemProgress = progress[identifier];
               return (
@@ -202,7 +202,7 @@ export function YouTubeMatcher() {
                       type="checkbox"
                       checked={accepted.has(identifier)}
                       onChange={() => toggleAccepted(identifier)}
-                      className="mt-0.5 h-4 w-4 shrink-0 accent-zinc-900"
+                      className="mt-0.5 h-4 w-4 shrink-0 accent-blue-500"
                     />
                   )}
                   {(!match || itemProgress) && (
@@ -210,7 +210,7 @@ export function YouTubeMatcher() {
                   )}
 
                   <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <span className="truncate text-xs font-medium text-zinc-800">{identifier}</span>
+                    <span className="truncate text-xs font-medium text-zinc-200">{identifier}</span>
 
                     {itemProgress ? (
                       <ProgressBadge status={itemProgress.status} error={itemProgress.error} />
@@ -220,19 +220,19 @@ export function YouTubeMatcher() {
                           href={match.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="truncate text-xs text-blue-600 hover:underline"
+                          className="truncate text-xs text-blue-400 hover:underline"
                         >
                           {match.title}
                         </a>
-                        <span className="shrink-0 rounded bg-zinc-100 px-1 py-0.5 text-xs text-zinc-500">
+                        <span className="shrink-0 rounded bg-zinc-800 px-1 py-0.5 text-xs text-zinc-400">
                           score {match.score}
                         </span>
                         {match.extractedDate && (
-                          <span className="text-xs text-zinc-400">{match.extractedDate}</span>
+                          <span className="text-xs text-zinc-500">{match.extractedDate}</span>
                         )}
                       </div>
                     ) : (
-                      <span className="text-xs text-zinc-400">No match found</span>
+                      <span className="text-xs text-zinc-500">No match found</span>
                     )}
                   </div>
                 </li>
@@ -243,11 +243,11 @@ export function YouTubeMatcher() {
       )}
 
       {summary && (
-        <div className="rounded-md border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm">
-          <span className="font-medium text-zinc-900">Done: </span>
-          <span className="text-green-700">{summary.successful} set</span>
-          {summary.noChange > 0 && <span className="text-zinc-500"> · {summary.noChange} no change</span>}
-          {summary.failed > 0 && <span className="text-red-600"> · {summary.failed} failed</span>}
+        <div className="rounded-md border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm">
+          <span className="font-medium text-zinc-100">Done: </span>
+          <span className="text-green-300">{summary.successful} set</span>
+          {summary.noChange > 0 && <span className="text-zinc-400"> · {summary.noChange} no change</span>}
+          {summary.failed > 0 && <span className="text-red-400"> · {summary.failed} failed</span>}
         </div>
       )}
     </div>
@@ -256,8 +256,8 @@ export function YouTubeMatcher() {
 
 function ProgressBadge({ status, error }: { status: ItemProgress['status']; error?: string }) {
   if (status === 'processing') return <span className="text-xs text-blue-500 animate-pulse">Writing…</span>;
-  if (status === 'completed') return <span className="text-xs text-green-600">✅ Written</span>;
-  if (status === 'no_change') return <span className="text-xs text-zinc-400">Already set</span>;
-  if (status === 'error') return <span className="text-xs text-red-600">❌ {error}</span>;
+  if (status === 'completed') return <span className="text-xs text-green-400">✅ Written</span>;
+  if (status === 'no_change') return <span className="text-xs text-zinc-500">Already set</span>;
+  if (status === 'error') return <span className="text-xs text-red-400">❌ {error}</span>;
   return null;
 }

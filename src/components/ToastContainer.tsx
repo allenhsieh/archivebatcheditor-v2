@@ -14,10 +14,10 @@ export function ToastContainer() {
           key={toast.id}
           className={[
             'flex items-start gap-3 rounded-lg border px-4 py-3 shadow-lg text-sm',
-            toast.type === 'error' && 'border-red-200 bg-red-50 text-red-900',
+            toast.type === 'error' && 'border-red-900 bg-red-950/40 text-red-900',
             toast.type === 'warning' && 'border-amber-200 bg-amber-50 text-amber-900',
             toast.type === 'success' && 'border-green-200 bg-green-50 text-green-900',
-            toast.type === 'info' && 'border-zinc-200 bg-white text-zinc-900',
+            toast.type === 'info' && 'border-zinc-800 bg-zinc-900 text-zinc-100',
           ]
             .filter(Boolean)
             .join(' ')}

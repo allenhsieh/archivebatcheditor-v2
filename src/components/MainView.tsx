@@ -53,30 +53,36 @@ export function MainView() {
   }, [itemsCache, selectAll, clearSelection]);
 
   return (
-    <div className="min-h-screen bg-zinc-50">
-      <header className="border-b border-zinc-200 bg-white px-6 py-4 shadow-sm">
-        <h1 className="text-lg font-semibold text-zinc-900">
+    <div className="min-h-screen bg-zinc-950">
+      <header className="border-b border-zinc-800 bg-zinc-900 px-6 py-4 shadow-sm">
+        <h1 className="text-lg font-semibold text-zinc-100">
           Archive.org Batch Editor
         </h1>
       </header>
 
-      <main className="mx-auto max-w-6xl space-y-4 px-6 py-6">
+      <main className="mx-auto max-w-7xl space-y-4 px-6 py-6">
         <SearchSection
           mode={mode}
           onModeChange={setMode}
           isLoading={isLoading}
         />
 
+        {/* Editor tools render above the items grid once a selection exists,
+            so you don't have to scroll past 500+ items to reach them. */}
+        {selectedCount > 0 && (
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
+            <MetadataEditor />
+            <BatchImageUpload />
+            <YouTubeMatcher />
+            <YouTubeRecordingDateEditor />
+            <YouTubeTagsSync />
+            <YouTubeDescriptionSync />
+          </div>
+        )}
+
         {mode.type !== 'idle' && (
           <ItemSelector mode={mode} onLoadingChange={setIsLoading} />
         )}
-
-        {selectedCount > 0 && <MetadataEditor />}
-        {selectedCount > 0 && <BatchImageUpload />}
-        {selectedCount > 0 && <YouTubeMatcher />}
-        {selectedCount > 0 && <YouTubeRecordingDateEditor />}
-        {selectedCount > 0 && <YouTubeTagsSync />}
-        {selectedCount > 0 && <YouTubeDescriptionSync />}
 
         <YouTubeSection />
         <LiveLog />
