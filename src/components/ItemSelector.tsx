@@ -150,15 +150,26 @@ interface ItemCardProps {
 }
 
 function ItemCard({ item, selected, onToggle }: ItemCardProps) {
-  const date =
-    typeof item.date === 'string' ? item.date.slice(0, 10) : null;
+  // Use a div (not a button) so we can nest an <a> link inside — HTML doesn't
+  // allow interactive elements inside <button>. The link calls stopPropagation
+  // so opening archive.org doesn't also toggle the selection.
+  function onKey(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (e.key === ' ' || e.key === 'Enter') {
+      e.preventDefault();
+      onToggle();
+    }
+  }
 
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onToggle}
+      onKeyDown={onKey}
+      aria-pressed={selected}
       className={[
-        'flex flex-col gap-1 rounded-lg border bg-zinc-900 p-3 text-left shadow-sm transition-all',
-        'hover:shadow-md',
+        'flex cursor-pointer flex-col gap-1 rounded-lg border bg-zinc-900 p-3 text-left shadow-sm transition-all',
+        'hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400',
         selected
           ? 'border-blue-500 ring-2 ring-blue-500'
           : 'border-zinc-800 hover:border-zinc-700',
@@ -183,13 +194,16 @@ function ItemCard({ item, selected, onToggle }: ItemCardProps) {
         </span>
       </div>
 
-      <span className="truncate text-xs text-zinc-500">{item.identifier}</span>
-
-      {date && (
-        <span className="mt-1 w-fit rounded bg-zinc-800 px-1.5 py-0.5 text-xs text-zinc-400">
-          {date}
-        </span>
-      )}
-    </button>
+      <a
+        href={`https://archive.org/details/${item.identifier}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
+        className="truncate text-xs text-blue-400 hover:text-blue-300 hover:underline"
+        title="Open on archive.org"
+      >
+        {item.identifier}
+      </a>
+    </div>
   );
 }
