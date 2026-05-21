@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useUIStore } from '@/stores/ui';
 import type { operationRuns, activityLogEntries } from '@/db/schema';
 
@@ -43,10 +43,12 @@ async function fetchEntries(runId: string): Promise<{ entries: ActivityLogEntry[
 }
 
 export function LogViewer() {
+  const qc = useQueryClient();
   const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [opTypeFilter, setOpTypeFilter] = useState<OpTypeFilter>('all');
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
+  const [clearing, setClearing] = useState(false);
   const selectAll = useUIStore((s) => s.selectAll);
 
   const { data, isLoading, error, refetch } = useQuery({
@@ -61,26 +63,55 @@ export function LogViewer() {
   });
 
   const runs = data?.runs ?? [];
+  const rawEntries = entriesData?.entries ?? [];
 
-  const entries = (entriesData?.entries ?? []).filter((e) => {
-    if (statusFilter === 'all') return true;
+  // Only worth filtering when the run actually has a mix of statuses.
+  const distinctStatuses = new Set(rawEntries.map((e) => e.status));
+  const showStatusFilter = rawEntries.length > 1 && distinctStatuses.size > 1;
+
+  const entries = rawEntries.filter((e) => {
+    if (!showStatusFilter || statusFilter === 'all') return true;
     return e.status === statusFilter;
   });
 
-  const failedIdentifiers = (entriesData?.entries ?? [])
+  const failedIdentifiers = rawEntries
     .filter((e) => e.status === 'failure')
     .map((e) => e.identifier);
+
+  async function handleClear() {
+    if (!window.confirm('Clear the entire activity log? This cannot be undone.')) return;
+    setClearing(true);
+    try {
+      const res = await fetch('/api/activity-log', { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to clear log');
+      setExpandedRunId(null);
+      await qc.invalidateQueries({ queryKey: ['activity-log'] });
+    } finally {
+      setClearing(false);
+    }
+  }
 
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-zinc-800 bg-zinc-900 p-4 shadow-sm">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-zinc-100">Activity Log</h2>
-        <button
-          onClick={() => void refetch()}
-          className="text-xs text-zinc-400 hover:text-zinc-100"
-        >
-          Refresh
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => void refetch()}
+            className="text-xs text-zinc-400 hover:text-zinc-100"
+          >
+            Refresh
+          </button>
+          {runs.length > 0 && (
+            <button
+              onClick={handleClear}
+              disabled={clearing}
+              className="text-xs text-red-400 hover:text-red-300 disabled:opacity-50"
+            >
+              {clearing ? 'Clearing…' : 'Clear log'}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Run-level filters */}
@@ -166,33 +197,39 @@ export function LogViewer() {
 
               {isExpanded && (
                 <div className="border-t border-zinc-800 px-3 py-3">
-                  {/* Filter + retry toolbar */}
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <div className="flex gap-1">
-                      {(['all', 'success', 'no_change', 'failure'] as StatusFilter[]).map((s) => (
+                  {/* Filter + retry toolbar — filter only shown for mixed-status runs */}
+                  {(showStatusFilter || failedIdentifiers.length > 0) && (
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      {showStatusFilter ? (
+                        <div className="flex gap-1">
+                          {(['all', 'success', 'no_change', 'failure'] as StatusFilter[]).map((s) => (
+                            <button
+                              key={s}
+                              onClick={() => setStatusFilter(s)}
+                              className={[
+                                'rounded px-2 py-0.5 text-xs font-medium transition-colors',
+                                statusFilter === s
+                                  ? 'bg-blue-600 text-white'
+                                  : 'text-zinc-400 hover:bg-zinc-800',
+                              ].join(' ')}
+                            >
+                              {s === 'no_change' ? 'no change' : s}
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <span />
+                      )}
+                      {failedIdentifiers.length > 0 && (
                         <button
-                          key={s}
-                          onClick={() => setStatusFilter(s)}
-                          className={[
-                            'rounded px-2 py-0.5 text-xs font-medium transition-colors',
-                            statusFilter === s
-                              ? 'bg-blue-600 text-white'
-                              : 'text-zinc-400 hover:bg-zinc-800',
-                          ].join(' ')}
+                          onClick={() => selectAll(failedIdentifiers)}
+                          className="text-xs text-red-400 hover:text-red-300"
                         >
-                          {s === 'no_change' ? 'no change' : s}
+                          Re-select {failedIdentifiers.length} failed
                         </button>
-                      ))}
+                      )}
                     </div>
-                    {failedIdentifiers.length > 0 && (
-                      <button
-                        onClick={() => selectAll(failedIdentifiers)}
-                        className="text-xs text-red-400 hover:text-red-300"
-                      >
-                        Re-select {failedIdentifiers.length} failed
-                      </button>
-                    )}
-                  </div>
+                  )}
 
                   {/* Entry list */}
                   <ul className="max-h-56 overflow-y-auto space-y-0.5">
@@ -227,7 +264,7 @@ export function LogViewer() {
 function EntryStatusBadge({ status }: { status: string }) {
   const config: Record<string, { label: string; cls: string }> = {
     success: { label: 'ok', cls: 'bg-green-900/40 text-green-300' },
-    failure: { label: 'fail', cls: 'bg-red-100 text-red-300' },
+    failure: { label: 'fail', cls: 'bg-red-900/40 text-red-300' },
     no_change: { label: '—', cls: 'bg-zinc-800 text-zinc-400' },
     skipped: { label: 'skip', cls: 'bg-zinc-800 text-zinc-400' },
   };

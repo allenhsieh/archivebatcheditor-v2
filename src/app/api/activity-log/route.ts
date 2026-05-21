@@ -3,6 +3,22 @@ import { desc, eq, and, gte, SQL } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { operationRuns, activityLogEntries } from '@/db/schema';
 
+export async function DELETE(req: NextRequest) {
+  const { searchParams } = req.nextUrl;
+  const runId = searchParams.get('runId');
+
+  if (runId) {
+    db.delete(activityLogEntries).where(eq(activityLogEntries.operationRunId, runId)).run();
+    db.delete(operationRuns).where(eq(operationRuns.id, runId)).run();
+    return NextResponse.json({ ok: true, scope: 'run', runId });
+  }
+
+  // Full clear — both tables.
+  db.delete(activityLogEntries).run();
+  db.delete(operationRuns).run();
+  return NextResponse.json({ ok: true, scope: 'all' });
+}
+
 const VALID_OP_TYPES = [
   'metadata_update',
   'flyer_fanout',
