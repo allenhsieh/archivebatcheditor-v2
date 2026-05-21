@@ -1,11 +1,16 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { ArchiveItem } from '@/types';
 import type { FetchMode } from './MainView';
 import { useUIStore } from '@/stores/ui';
 import { useToastStore } from '@/stores/toast';
+
+function hasYoutubeLink(item: ArchiveItem): boolean {
+  const v = item.youtube;
+  return typeof v === 'string' && v.length > 0;
+}
 
 interface ItemSelectorProps {
   mode: FetchMode;
@@ -41,6 +46,8 @@ export function ItemSelector({ mode, onLoadingChange }: ItemSelectorProps) {
   const addToast = useToastStore((s) => s.addToast);
   // Anchor for shift-click range selection. Set on every plain (no-shift) click.
   const anchorRef = useRef<string | null>(null);
+  // Filter: when on, only items without a youtube link are displayed.
+  const [missingYoutubeOnly, setMissingYoutubeOnly] = useState(false);
 
   const queryKey =
     mode.type === 'user-items'
@@ -66,6 +73,14 @@ export function ItemSelector({ mode, onLoadingChange }: ItemSelectorProps) {
   }, [error, addToast]);
 
   const items = useMemo(() => data?.items ?? [], [data]);
+  const missingYoutubeCount = useMemo(
+    () => items.filter((i) => !hasYoutubeLink(i)).length,
+    [items],
+  );
+  const visibleItems = useMemo(
+    () => (missingYoutubeOnly ? items.filter((i) => !hasYoutubeLink(i)) : items),
+    [items, missingYoutubeOnly],
+  );
   const selectedCount = selectedIdentifiers.size;
 
   useEffect(() => {
@@ -93,9 +108,10 @@ export function ItemSelector({ mode, onLoadingChange }: ItemSelectorProps) {
   return (
     <div className="flex flex-col gap-3">
       {/* Selection toolbar */}
-      <div className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900 px-4 py-2 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-800 bg-zinc-900 px-4 py-2 shadow-sm">
         <span className="text-sm text-zinc-400">
-          <span className="font-medium text-zinc-100">{items.length}</span> items
+          <span className="font-medium text-zinc-100">{visibleItems.length}</span>
+          {missingYoutubeOnly ? ` of ${items.length} items (missing youtube)` : ' items'}
           {selectedCount > 0 && (
             <>
               {' — '}
@@ -106,11 +122,27 @@ export function ItemSelector({ mode, onLoadingChange }: ItemSelectorProps) {
         <div className="flex items-center gap-3">
           <span className="hidden text-xs text-zinc-500 sm:inline">Shift+Click for range</span>
           <button
-            onClick={() => selectAll(items.map((i) => i.identifier))}
-            disabled={items.length === 0}
+            onClick={() => setMissingYoutubeOnly((v) => !v)}
+            disabled={missingYoutubeCount === 0}
+            className={[
+              'rounded-md px-2 py-1 text-xs font-medium transition-colors',
+              missingYoutubeOnly
+                ? 'bg-blue-600 text-white hover:bg-blue-500'
+                : 'border border-zinc-700 text-zinc-300 hover:bg-zinc-950',
+              missingYoutubeCount === 0 ? 'cursor-not-allowed opacity-40' : '',
+            ].join(' ')}
+            title={missingYoutubeCount === 0 ? 'All items have youtube links' : 'Filter to items missing a youtube link'}
+          >
+            {missingYoutubeOnly
+              ? `✓ Missing youtube (${missingYoutubeCount})`
+              : `Missing youtube (${missingYoutubeCount})`}
+          </button>
+          <button
+            onClick={() => selectAll(visibleItems.map((i) => i.identifier))}
+            disabled={visibleItems.length === 0}
             className="text-xs text-zinc-400 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Select all
+            Select {missingYoutubeOnly && missingYoutubeCount > 0 ? 'these' : 'all'}
           </button>
           {selectedCount > 0 && (
             <button
@@ -124,21 +156,25 @@ export function ItemSelector({ mode, onLoadingChange }: ItemSelectorProps) {
       </div>
 
       {/* Item grid — capped at ~half viewport so editor tools stay reachable */}
-      {items.length === 0 ? (
+      {visibleItems.length === 0 ? (
         <div className="flex h-48 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-900">
-          <p className="text-sm text-zinc-500">No items found</p>
+          <p className="text-sm text-zinc-500">
+            {items.length === 0
+              ? 'No items found'
+              : 'No items match the current filter'}
+          </p>
         </div>
       ) : (
         <div className="max-h-[50vh] overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-950/40 p-2">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {items.map((item) => (
+            {visibleItems.map((item) => (
               <ItemCard
                 key={item.identifier}
                 item={item}
                 selected={selectedIdentifiers.has(item.identifier)}
                 onSelect={(shiftKey) => {
                   if (shiftKey && anchorRef.current && anchorRef.current !== item.identifier) {
-                    selectRange(items.map((i) => i.identifier), anchorRef.current, item.identifier);
+                    selectRange(visibleItems.map((i) => i.identifier), anchorRef.current, item.identifier);
                   } else {
                     toggleSelection(item.identifier);
                     anchorRef.current = item.identifier;
