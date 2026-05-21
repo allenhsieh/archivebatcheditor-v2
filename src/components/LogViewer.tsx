@@ -170,13 +170,18 @@ export function LogViewer() {
                 onClick={() => setExpandedRunId(isExpanded ? null : run.id)}
                 className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left hover:bg-zinc-950"
               >
-                <div className="flex flex-col gap-0.5">
+                <div className="flex flex-col gap-0.5 min-w-0 flex-1">
                   <span className="text-sm font-medium text-zinc-100">
                     {formatOperationType(run.operationType)}
                   </span>
                   <span className="text-xs text-zinc-500">
                     {formatDate(run.startedAt)} · {run.totalItems} items
                   </span>
+                  {formatRunSummary(run) && (
+                    <span className="text-xs text-zinc-400 font-mono truncate">
+                      {formatRunSummary(run)}
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-3 text-xs">
                   {run.finishedAt && (
@@ -272,6 +277,35 @@ function EntryStatusBadge({ status }: { status: string }) {
   return (
     <span className={`shrink-0 rounded px-1 py-0.5 font-medium ${cls}`}>{label}</span>
   );
+}
+
+// One-line, dense summary of the operation's parameters. Surfaces what the
+// run actually did so the user doesn't have to expand to see field changes.
+function formatRunSummary(run: OperationRun): string | null {
+  const params = run.parameters;
+  if (!params || typeof params !== 'object') return null;
+
+  if (run.operationType === 'metadata_update') {
+    const updates = (params as { updates?: unknown }).updates;
+    if (!Array.isArray(updates)) return null;
+    const parts: string[] = [];
+    for (const u of updates) {
+      if (typeof u !== 'object' || u === null) continue;
+      const rec = u as Record<string, unknown>;
+      const op = typeof rec.operation === 'string' ? rec.operation : '?';
+      const field = typeof rec.field === 'string' ? rec.field : '?';
+      const value = typeof rec.value === 'string' ? rec.value : '';
+      parts.push(value ? `${op} ${field}=${value}` : `${op} ${field}`);
+    }
+    return parts.length > 0 ? parts.join('; ') : null;
+  }
+
+  if (run.operationType === 'flyer_fanout') {
+    const filename = (params as { originalFilename?: unknown }).originalFilename;
+    return typeof filename === 'string' ? filename : null;
+  }
+
+  return null;
 }
 
 function formatOperationType(type: string): string {
