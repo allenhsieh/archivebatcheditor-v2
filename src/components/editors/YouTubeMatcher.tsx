@@ -153,15 +153,15 @@ export function YouTubeMatcher() {
   const acceptedCount = matches.filter((m) => m.match !== null && accepted.has(m.identifier)).length;
 
   return (
-    <div className="flex flex-col gap-4 rounded-lg border border-zinc-800 bg-zinc-900 p-4 shadow-sm">
+    <div className="flex flex-col gap-3 rounded-lg border border-zinc-800 bg-zinc-900 p-3 shadow-sm">
       <div className="flex flex-col gap-1">
-        <h2 className="text-sm font-semibold text-zinc-100">YouTube Matcher</h2>
-        <p className="text-xs text-zinc-400">
+        <h2 className="text-base font-semibold text-zinc-100">YouTube Matcher</h2>
+        <p className="text-sm text-zinc-400">
           Finds each item&apos;s YouTube video by title + date, then writes that URL to the
-          Archive.org item&apos;s <code className="rounded bg-zinc-800 px-1 py-0.5 text-[11px] text-zinc-300">youtube</code> field.
+          Archive.org item&apos;s <code className="rounded bg-zinc-800 px-1 py-0.5 text-xs text-zinc-300">youtube</code> field.
           Each selected item gets its own match — required before Recording Dates / Tags / Description sync.
         </p>
-        <p className="text-xs text-zinc-500">Matches from local cache — no API quota used.</p>
+        <p className="text-sm text-zinc-500">Matches from local cache — no API quota used.</p>
       </div>
 
       <div className="flex items-center gap-2">
@@ -191,7 +191,7 @@ export function YouTubeMatcher() {
       {/* Match results */}
       {matches.length > 0 && (
         <div className="flex flex-col gap-1">
-          <div className="mb-1 text-xs font-medium text-zinc-400">
+          <div className="mb-1 text-sm font-medium text-zinc-400">
             {matches.filter((m) => m.match !== null).length} / {matches.length} matched
             {acceptedCount > 0 && ` · ${acceptedCount} accepted`}
           </div>
@@ -200,7 +200,7 @@ export function YouTubeMatcher() {
             {matches.map(({ identifier, match }) => {
               const itemProgress = progress[identifier];
               return (
-                <li key={identifier} className="flex items-start gap-3 px-3 py-2.5">
+                <li key={identifier} className="flex items-start gap-2 px-3 py-2">
                   {/* Accept/reject checkbox */}
                   {match && !itemProgress && (
                     <input
@@ -215,7 +215,7 @@ export function YouTubeMatcher() {
                   )}
 
                   <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <span className="truncate text-xs font-medium text-zinc-200">{identifier}</span>
+                    <span className="truncate text-sm font-medium text-zinc-200">{identifier}</span>
 
                     {itemProgress ? (
                       <ProgressBadge status={itemProgress.status} error={itemProgress.error} />
@@ -225,19 +225,19 @@ export function YouTubeMatcher() {
                           href={match.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="truncate text-xs text-blue-400 hover:underline"
+                          className="truncate text-sm text-blue-400 hover:underline"
                         >
                           {match.title}
                         </a>
-                        <span className="shrink-0 rounded bg-zinc-800 px-1 py-0.5 text-xs text-zinc-400">
+                        <span className="shrink-0 rounded bg-zinc-800 px-1 py-0.5 text-sm text-zinc-400">
                           score {match.score}
                         </span>
                         {match.extractedDate && (
-                          <span className="text-xs text-zinc-500">{match.extractedDate}</span>
+                          <span className="text-sm text-zinc-500">{match.extractedDate}</span>
                         )}
                       </div>
                     ) : (
-                      <span className="text-xs text-zinc-500">No match found</span>
+                      <span className="text-sm text-zinc-500">No match found</span>
                     )}
                   </div>
                 </li>
@@ -260,9 +260,9 @@ export function YouTubeMatcher() {
 }
 
 function ProgressBadge({ status, error }: { status: ItemProgress['status']; error?: string }) {
-  if (status === 'processing') return <span className="text-xs text-blue-500 animate-pulse">Writing…</span>;
-  if (status === 'completed') return <span className="text-xs text-green-400">✅ Written</span>;
-  if (status === 'no_change') return <span className="text-xs text-zinc-500">Already set</span>;
-  if (status === 'error') return <span className="text-xs text-red-400">❌ {error}</span>;
+  if (status === 'processing') return <span className="text-sm text-blue-500 animate-pulse">Writing…</span>;
+  if (status === 'completed') return <span className="text-sm text-green-400">✅ Written</span>;
+  if (status === 'no_change') return <span className="text-sm text-zinc-500">Already set</span>;
+  if (status === 'error') return <span className="text-sm text-red-400">❌ {error}</span>;
   return null;
 }

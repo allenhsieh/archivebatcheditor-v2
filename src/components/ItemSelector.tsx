@@ -97,7 +97,7 @@ export function ItemSelector({ mode, onLoadingChange }: ItemSelectorProps) {
 
   if (error) {
     return (
-      <div className="rounded-lg border border-red-900 bg-red-950/40 p-4">
+      <div className="rounded-lg border border-red-900 bg-red-950/40 p-3">
         <p className="text-sm font-medium text-red-300">
           {error instanceof Error ? error.message : 'Failed to load items'}
         </p>
@@ -106,9 +106,9 @@ export function ItemSelector({ mode, onLoadingChange }: ItemSelectorProps) {
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-2">
       {/* Selection toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-800 bg-zinc-900 px-4 py-2 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-zinc-800 bg-zinc-900 px-4 py-2 shadow-sm">
         <span className="text-sm text-zinc-400">
           <span className="font-medium text-zinc-100">{visibleItems.length}</span>
           {missingYoutubeOnly ? ` of ${items.length} items (missing youtube)` : ' items'}
@@ -119,13 +119,13 @@ export function ItemSelector({ mode, onLoadingChange }: ItemSelectorProps) {
             </>
           )}
         </span>
-        <div className="flex items-center gap-3">
-          <span className="hidden text-xs text-zinc-500 sm:inline">Shift+Click for range</span>
+        <div className="flex items-center gap-2">
+          <span className="hidden text-sm text-zinc-500 sm:inline">Shift+Click for range</span>
           <button
             onClick={() => setMissingYoutubeOnly((v) => !v)}
             disabled={missingYoutubeCount === 0}
             className={[
-              'rounded-md px-2 py-1 text-xs font-medium transition-colors',
+              'rounded-md px-2 py-1 text-sm font-medium transition-colors',
               missingYoutubeOnly
                 ? 'bg-blue-600 text-white hover:bg-blue-500'
                 : 'border border-zinc-700 text-zinc-300 hover:bg-zinc-950',
@@ -140,14 +140,14 @@ export function ItemSelector({ mode, onLoadingChange }: ItemSelectorProps) {
           <button
             onClick={() => selectAll(visibleItems.map((i) => i.identifier))}
             disabled={visibleItems.length === 0}
-            className="text-xs text-zinc-400 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-40"
+            className="text-sm text-zinc-400 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Select {missingYoutubeOnly && missingYoutubeCount > 0 ? 'these' : 'all'}
           </button>
           {selectedCount > 0 && (
             <button
               onClick={clearSelection}
-              className="text-xs text-zinc-400 hover:text-zinc-100"
+              className="text-sm text-zinc-400 hover:text-zinc-100"
             >
               Clear
             </button>
@@ -166,7 +166,7 @@ export function ItemSelector({ mode, onLoadingChange }: ItemSelectorProps) {
         </div>
       ) : (
         <div className="max-h-[50vh] overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-950/40 p-2">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
             {visibleItems.map((item) => (
               <ItemCard
                 key={item.identifier}
@@ -253,7 +253,7 @@ function ItemCard({ item, selected, onSelect }: ItemCardProps) {
         target="_blank"
         rel="noopener noreferrer"
         onClick={(e) => e.stopPropagation()}
-        className="truncate text-xs text-blue-400 hover:text-blue-300 hover:underline"
+        className="truncate text-sm text-blue-400 hover:text-blue-300 hover:underline"
         title="Open on archive.org"
       >
         {item.identifier}

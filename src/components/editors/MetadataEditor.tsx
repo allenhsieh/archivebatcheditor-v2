@@ -110,13 +110,13 @@ export function MetadataEditor() {
   const progressEntries = Object.entries(progress);
 
   return (
-    <div className="flex flex-col gap-4 rounded-lg border border-zinc-800 bg-zinc-900 p-4 shadow-sm">
-      <h2 className="text-sm font-semibold text-zinc-100">Edit Metadata</h2>
+    <div className="flex flex-col gap-3 rounded-lg border border-zinc-800 bg-zinc-900 p-3 shadow-sm">
+      <h2 className="text-base font-semibold text-zinc-100">Edit Metadata</h2>
 
       {/* Field + operation: two side-by-side selects */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-2">
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-zinc-400">Field</label>
+          <label className="text-sm font-medium text-zinc-400">Field</label>
           <select
             value={field}
             onChange={(e) => handleFieldChange(e.target.value)}
@@ -131,7 +131,7 @@ export function MetadataEditor() {
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-zinc-400">Operation</label>
+          <label className="text-sm font-medium text-zinc-400">Operation</label>
           <select
             value={operation}
             onChange={(e) => setOperation(e.target.value as Operation)}
@@ -147,7 +147,7 @@ export function MetadataEditor() {
 
       {isCustomField && (
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-zinc-400">Field name</label>
+          <label className="text-sm font-medium text-zinc-400">Field name</label>
           <input
             type="text"
             value={customField}
@@ -161,7 +161,7 @@ export function MetadataEditor() {
 
       {operation !== 'remove' && (
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-zinc-400">Value</label>
+          <label className="text-sm font-medium text-zinc-400">Value</label>
           <input
             type="text"
             value={value}
@@ -173,7 +173,7 @@ export function MetadataEditor() {
         </div>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <label className="flex items-center gap-1.5 cursor-pointer select-none">
           <input
             type="checkbox"
@@ -182,7 +182,7 @@ export function MetadataEditor() {
             disabled={isRunning}
             className="h-3.5 w-3.5 rounded border-zinc-700 accent-blue-500"
           />
-          <span className="text-xs text-zinc-400">Dry run</span>
+          <span className="text-sm text-zinc-400">Dry run</span>
         </label>
         <div className="flex items-center gap-2">
           {isRunning && (
@@ -210,12 +210,12 @@ export function MetadataEditor() {
       {/* Progress list */}
       {progressEntries.length > 0 && (
         <div className="flex flex-col gap-1 rounded-md border border-zinc-800 bg-zinc-950 p-3">
-          <div className="mb-1 text-xs font-medium text-zinc-400">
+          <div className="mb-1 text-sm font-medium text-zinc-400">
             {progressEntries.length} / {selectedList.length} processed
           </div>
           <ul className="max-h-48 overflow-y-auto space-y-0.5">
             {progressEntries.map(([id, p]) => (
-              <li key={id} className="flex items-start gap-2 text-xs">
+              <li key={id} className="flex items-start gap-2 text-sm">
                 <StatusDot status={p.status} dryRun={dryRun} />
                 <span className="truncate font-mono text-zinc-300">{id}</span>
                 {p.error && <span className="text-red-400 truncate">{p.error}</span>}

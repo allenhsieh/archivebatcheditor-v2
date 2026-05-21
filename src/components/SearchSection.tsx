@@ -28,8 +28,8 @@ export function SearchSection({ mode, onModeChange, isLoading }: SearchSectionPr
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-zinc-800 bg-zinc-900 p-4 shadow-sm">
-      <div className="flex items-center gap-3">
+    <div className="flex flex-col gap-2 rounded-lg border border-zinc-800 bg-zinc-900 p-3 shadow-sm">
+      <div className="flex items-center gap-2">
         <button
           onClick={loadMyItems}
           disabled={isLoading}

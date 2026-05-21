@@ -24,20 +24,20 @@ export function LiveLog() {
   if (lines.length === 0) return null;
 
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-zinc-800 bg-zinc-900 p-4 shadow-sm">
+    <div className="flex flex-col gap-2 rounded-lg border border-zinc-800 bg-zinc-900 p-3 shadow-sm">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-zinc-100">
+        <h2 className="text-base font-semibold text-zinc-100">
           Session Log <span className="font-normal text-zinc-500">({lines.length})</span>
         </h2>
         <button
           onClick={clear}
-          className="text-xs text-zinc-500 hover:text-zinc-300"
+          className="text-sm text-zinc-500 hover:text-zinc-300"
         >
           Clear
         </button>
       </div>
 
-      <div className="max-h-64 overflow-y-auto rounded-md bg-zinc-950 p-2 font-mono text-xs">
+      <div className="max-h-64 overflow-y-auto rounded-md bg-zinc-950 p-2 font-mono text-sm">
         {lines.map((line) => {
           const cfg = TYPE_CONFIG[line.type];
           return (

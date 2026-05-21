@@ -160,19 +160,19 @@ export function YouTubeDescriptionCleanup() {
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-zinc-800 bg-zinc-900 p-4 shadow-sm">
+    <div className="flex flex-col gap-2 rounded-lg border border-zinc-800 bg-zinc-900 p-3 shadow-sm">
       <div className="flex flex-col gap-1">
-        <h2 className="text-sm font-semibold text-zinc-100">Bulk YouTube Description Cleanup</h2>
-        <p className="text-xs text-zinc-400">
+        <h2 className="text-base font-semibold text-zinc-100">Bulk YouTube Description Cleanup</h2>
+        <p className="text-sm text-zinc-400">
           Find a substring across all your channel&apos;s video descriptions, then replace or remove it.
           Searches the local cache (refresh first if you haven&apos;t pulled descriptions yet); writes
           go through the YouTube API (51 quota units per video updated).
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-zinc-400">Find (substring)</label>
+          <label className="text-sm font-medium text-zinc-400">Find (substring)</label>
           <input
             type="text"
             value={find}
@@ -182,7 +182,7 @@ export function YouTubeDescriptionCleanup() {
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-zinc-400">
+          <label className="text-sm font-medium text-zinc-400">
             Replace with <span className="text-zinc-500">(leave empty to delete)</span>
           </label>
           <input
@@ -196,7 +196,7 @@ export function YouTubeDescriptionCleanup() {
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-4">
+      <div className="flex flex-wrap items-center gap-3">
         <label className="flex items-center gap-1.5 cursor-pointer select-none">
           <input
             type="checkbox"
@@ -204,7 +204,7 @@ export function YouTubeDescriptionCleanup() {
             onChange={(e) => setCaseInsensitive(e.target.checked)}
             className="h-3.5 w-3.5 rounded border-zinc-700 accent-blue-500"
           />
-          <span className="text-xs text-zinc-400">Case-insensitive</span>
+          <span className="text-sm text-zinc-400">Case-insensitive</span>
         </label>
         <label className="flex items-center gap-1.5 cursor-pointer select-none">
           <input
@@ -213,7 +213,7 @@ export function YouTubeDescriptionCleanup() {
             onChange={(e) => setRemoveWholeLine(e.target.checked)}
             className="h-3.5 w-3.5 rounded border-zinc-700 accent-blue-500"
           />
-          <span className="text-xs text-zinc-400" title="Remove the entire line containing the match instead of just the substring">
+          <span className="text-sm text-zinc-400" title="Remove the entire line containing the match instead of just the substring">
             Remove whole line containing match
           </span>
         </label>
@@ -244,24 +244,24 @@ export function YouTubeDescriptionCleanup() {
       {matches.length > 0 && (
         <div className="flex flex-col gap-1">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-xs font-medium text-zinc-400">
+            <p className="text-sm font-medium text-zinc-400">
               {matches.length} match{matches.length !== 1 ? 'es' : ''} ·{' '}
               <span className="text-zinc-500">
                 {accepted.size} selected · click to toggle, shift+click for range
               </span>
             </p>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <button
                 onClick={selectAllMatches}
                 disabled={accepted.size === matches.length}
-                className="text-xs text-zinc-400 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-40"
+                className="text-sm text-zinc-400 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Select all
               </button>
               {accepted.size > 0 && (
                 <button
                   onClick={clearSelection}
-                  className="text-xs text-zinc-400 hover:text-zinc-100"
+                  className="text-sm text-zinc-400 hover:text-zinc-100"
                 >
                   Clear
                 </button>
@@ -281,7 +281,7 @@ export function YouTubeDescriptionCleanup() {
                     toggleAccepted(m.videoId, e.shiftKey);
                   }}
                   className={[
-                    'flex items-start gap-3 px-3 py-2.5 transition-colors select-none',
+                    'flex items-start gap-2 px-3 py-2 transition-colors select-none',
                     itemProgress ? '' : 'cursor-pointer hover:bg-zinc-950/60',
                     isAccepted ? 'bg-blue-950/30' : '',
                   ].join(' ')}
@@ -305,15 +305,15 @@ export function YouTubeDescriptionCleanup() {
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={(e) => e.stopPropagation()}
-                      className="truncate text-xs text-blue-400 hover:underline"
+                      className="truncate text-sm text-blue-400 hover:underline"
                     >
                       {m.title}
                     </a>
-                    <span className="text-[11px] text-zinc-500 truncate">
+                    <span className="text-xs text-zinc-500 truncate">
                       {previewSnippet(m.description, find, caseInsensitive)}
                     </span>
                     {itemProgress && (
-                      <span className="text-[11px]">
+                      <span className="text-xs">
                         {itemProgress.status === 'processing' && <span className="text-blue-400 animate-pulse">Writing…</span>}
                         {itemProgress.status === 'completed' && <span className="text-green-400">✅ Updated</span>}
                         {itemProgress.status === 'no_change' && <span className="text-zinc-500">No change (pattern absent live)</span>}

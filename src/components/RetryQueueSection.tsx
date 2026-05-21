@@ -70,20 +70,20 @@ export function RetryQueueSection() {
   if (totalPending === 0 && stuck === 0) return null;
 
   return (
-    <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4 shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <h2 className="text-sm font-semibold text-zinc-100">YouTube Retry Queue</h2>
-          <span className="rounded-full bg-amber-900/40 px-2 py-0.5 text-xs font-medium text-amber-300">
+    <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-3 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <h2 className="text-base font-semibold text-zinc-100">YouTube Retry Queue</h2>
+          <span className="rounded-full bg-amber-900/40 px-2 py-0.5 text-sm font-medium text-amber-300">
             {totalPending} pending
           </span>
           {(status?.failed_terminal ?? 0) > 0 && (
-            <span className="rounded-full bg-red-900/40 px-2 py-0.5 text-xs font-medium text-red-300" title="Items that failed 5+ retries — won't auto-retry">
+            <span className="rounded-full bg-red-900/40 px-2 py-0.5 text-sm font-medium text-red-300" title="Items that failed 5+ retries — won't auto-retry">
               {status?.failed_terminal} terminal
             </span>
           )}
           {(status?.auth_expired ?? 0) > 0 && (
-            <span className="rounded-full bg-red-900/40 px-2 py-0.5 text-xs font-medium text-red-300" title="Token expired during a previous drain — re-authorize then retry">
+            <span className="rounded-full bg-red-900/40 px-2 py-0.5 text-sm font-medium text-red-300" title="Token expired during a previous drain — re-authorize then retry">
               {status?.auth_expired} blocked on auth
             </span>
           )}
@@ -93,14 +93,14 @@ export function RetryQueueSection() {
             <button
               onClick={() => drainMut.mutate()}
               disabled={drainMut.isPending}
-              className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {drainMut.isPending ? 'Retrying…' : `Retry ${totalPending} pending`}
             </button>
           )}
         </div>
       </div>
-      <p className="mt-2 text-xs text-zinc-500">
+      <p className="mt-2 text-sm text-zinc-500">
         Items that hit YouTube&apos;s daily quota are parked here. The quota resets at midnight
         Pacific Time. Click &ldquo;Retry pending&rdquo; after the reset (or any time) to drain.
       </p>

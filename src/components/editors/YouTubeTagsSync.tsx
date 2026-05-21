@@ -80,13 +80,13 @@ export function YouTubeTagsSync() {
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-zinc-800 bg-zinc-900 p-4 shadow-sm">
+    <div className="flex flex-col gap-2 rounded-lg border border-zinc-800 bg-zinc-900 p-3 shadow-sm">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-zinc-100">YouTube Tags Sync</h2>
-        <p className="text-xs text-zinc-500">Merges Archive.org subjects → YouTube tags</p>
+        <h2 className="text-base font-semibold text-zinc-100">YouTube Tags Sync</h2>
+        <p className="text-sm text-zinc-500">Merges Archive.org subjects → YouTube tags</p>
       </div>
 
-      <div className="text-xs text-zinc-400">
+      <div className="text-sm text-zinc-400">
         {updatable.length} matched item{updatable.length !== 1 ? 's' : ''} with subjects ready to sync
       </div>
 

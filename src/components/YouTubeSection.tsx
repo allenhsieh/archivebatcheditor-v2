@@ -38,12 +38,9 @@ async function triggerCacheRefresh(): Promise<{ videoCount: number }> {
 export function YouTubeSection() {
   const qc = useQueryClient();
   const addLine = useLogStore((s) => s.addLine);
-  // Initialize from URL synchronously so we don't setState inside an effect.
-  const [authError, setAuthError] = useState<string | null>(() => {
-    if (typeof window === 'undefined') return null;
-    const params = new URLSearchParams(window.location.search);
-    return params.get('youtube_auth') === 'error' ? (params.get('reason') ?? 'OAuth failed') : null;
-  });
+  // Initial state must match between server and client to avoid a hydration
+  // mismatch. The effect below reads URL params after mount and sets it then.
+  const [authError, setAuthError] = useState<string | null>(null);
 
   const { data: auth } = useQuery({
     queryKey: ['youtube-auth-status'],
@@ -72,14 +69,17 @@ export function YouTubeSection() {
   });
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    // Reading window.* must happen after mount, not in a useState initializer,
+    // or SSR/CSR render outputs disagree (hydration mismatch). The lint
+    // rule against setState-in-effect doesn't apply here for the same reason.
     const params = new URLSearchParams(window.location.search);
     const result = params.get('youtube_auth');
     if (result === 'success') {
       void qc.invalidateQueries({ queryKey: ['youtube-auth-status'] });
       window.history.replaceState({}, '', '/');
     } else if (result === 'error') {
-      // authError was already initialized from URL above; just clean the URL.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setAuthError(params.get('reason') ?? 'OAuth failed');
       window.history.replaceState({}, '', '/');
     }
   }, [qc]);
@@ -110,17 +110,17 @@ export function YouTubeSection() {
         <button onClick={() => setAuthError(null)} className="ml-3 opacity-50 hover:opacity-100">×</button>
       </div>
     )}
-    <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4 shadow-sm">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <h2 className="text-sm font-semibold text-zinc-100">YouTube</h2>
+    <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-3 shadow-sm">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <h2 className="text-base font-semibold text-zinc-100">YouTube</h2>
 
           {auth.authenticated ? (
-            <span className="rounded-full bg-green-900/40 px-2 py-0.5 text-xs font-medium text-green-300">
+            <span className="rounded-full bg-green-900/40 px-2 py-0.5 text-sm font-medium text-green-300">
               Connected
             </span>
           ) : (
-            <span className="rounded-full bg-amber-900/40 px-2 py-0.5 text-xs font-medium text-amber-300">
+            <span className="rounded-full bg-amber-900/40 px-2 py-0.5 text-sm font-medium text-amber-300">
               {auth.revoked ? 'Token revoked — re-authorize' : 'Not connected'}
             </span>
           )}
@@ -130,16 +130,16 @@ export function YouTubeSection() {
           {!auth.authenticated && (
             <a
               href="/api/auth/youtube"
-              className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-700"
+              className="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-red-700"
             >
               {auth.revoked ? 'Re-authorize YouTube' : 'Connect YouTube'}
             </a>
           )}
 
           {auth.authenticated && (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               {cache && (
-                <span className="text-xs text-zinc-400">
+                <span className="text-sm text-zinc-400">
                   {cache.videoCount > 0
                     ? `${cache.videoCount} videos cached${cache.lastFetchedAt ? ` · ${formatDate(new Date(cache.lastFetchedAt))}` : ''}`
                     : 'Cache empty'}
@@ -148,15 +148,15 @@ export function YouTubeSection() {
               <button
                 onClick={() => refresh.mutate()}
                 disabled={refresh.isPending}
-                className="rounded-md border border-zinc-700 px-3 py-1.5 text-xs font-medium text-zinc-300 transition-colors hover:bg-zinc-950 disabled:opacity-50"
+                className="rounded-md border border-zinc-700 px-3 py-1.5 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-950 disabled:opacity-50"
               >
                 {refresh.isPending ? 'Refreshing…' : 'Refresh cache'}
               </button>
               {refresh.isError && (
-                <span className="text-xs text-red-400">{(refresh.error as Error).message}</span>
+                <span className="text-sm text-red-400">{(refresh.error as Error).message}</span>
               )}
               {refresh.isSuccess && (
-                <span className="text-xs text-green-400">{refresh.data.videoCount} videos cached</span>
+                <span className="text-sm text-green-400">{refresh.data.videoCount} videos cached</span>
               )}
             </div>
           )}

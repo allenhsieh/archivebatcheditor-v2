@@ -100,15 +100,15 @@ export function BatchImageUpload() {
   const progressEntries = Object.entries(progress);
 
   return (
-    <div className="flex flex-col gap-4 rounded-lg border border-zinc-800 bg-zinc-900 p-4 shadow-sm">
-      <h2 className="text-sm font-semibold text-zinc-100">Upload Flyer</h2>
-      <p className="text-xs text-zinc-400">
+    <div className="flex flex-col gap-3 rounded-lg border border-zinc-800 bg-zinc-900 p-3 shadow-sm">
+      <h2 className="text-base font-semibold text-zinc-100">Upload Flyer</h2>
+      <p className="text-sm text-zinc-400">
         Upload one image — it will be set as the cover/thumbnail on all {selectedList.length} selected item{selectedList.length !== 1 ? 's' : ''}.
       </p>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-zinc-400">Image file</label>
+          <label className="text-sm font-medium text-zinc-400">Image file</label>
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -131,7 +131,7 @@ export function BatchImageUpload() {
             onChange={handleFileChange}
             className="sr-only"
           />
-          {fileError && <p className="text-xs text-red-400">{fileError}</p>}
+          {fileError && <p className="text-sm text-red-400">{fileError}</p>}
         </div>
 
         <div className="flex gap-2">
@@ -157,12 +157,12 @@ export function BatchImageUpload() {
 
       {progressEntries.length > 0 && (
         <div className="flex flex-col gap-1 rounded-md border border-zinc-800 bg-zinc-950 p-3">
-          <div className="mb-1 text-xs font-medium text-zinc-400">
+          <div className="mb-1 text-sm font-medium text-zinc-400">
             {progressEntries.length} / {selectedList.length} processed
           </div>
           <ul className="max-h-48 overflow-y-auto space-y-0.5">
             {progressEntries.map(([id, p]) => (
-              <li key={id} className="flex items-center gap-2 text-xs">
+              <li key={id} className="flex items-center gap-2 text-sm">
                 <ProgressDot status={p.status} />
                 <span className="truncate font-mono text-zinc-300">{id}</span>
                 {p.error && <span className="text-red-400 truncate">{p.error}</span>}

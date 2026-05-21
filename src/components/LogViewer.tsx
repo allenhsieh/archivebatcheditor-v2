@@ -92,13 +92,13 @@ export function LogViewer() {
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-zinc-800 bg-zinc-900 p-4 shadow-sm">
+    <div className="flex flex-col gap-2 rounded-lg border border-zinc-800 bg-zinc-900 p-3 shadow-sm">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-zinc-100">Activity Log</h2>
-        <div className="flex items-center gap-3">
+        <h2 className="text-base font-semibold text-zinc-100">Activity Log</h2>
+        <div className="flex items-center gap-2">
           <button
             onClick={() => void refetch()}
-            className="text-xs text-zinc-400 hover:text-zinc-100"
+            className="text-sm text-zinc-400 hover:text-zinc-100"
           >
             Refresh
           </button>
@@ -106,7 +106,7 @@ export function LogViewer() {
             <button
               onClick={handleClear}
               disabled={clearing}
-              className="text-xs text-red-400 hover:text-red-300 disabled:opacity-50"
+              className="text-sm text-red-400 hover:text-red-300 disabled:opacity-50"
             >
               {clearing ? 'Clearing…' : 'Clear log'}
             </button>
@@ -115,13 +115,13 @@ export function LogViewer() {
       </div>
 
       {/* Run-level filters */}
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-1.5">
-          <span className="text-xs text-zinc-500">Type:</span>
+          <span className="text-sm text-zinc-500">Type:</span>
           <select
             value={opTypeFilter}
             onChange={(e) => setOpTypeFilter(e.target.value as OpTypeFilter)}
-            className="rounded border border-zinc-800 px-2 py-0.5 text-xs text-zinc-300 outline-none focus:border-zinc-500"
+            className="rounded border border-zinc-800 px-2 py-0.5 text-sm text-zinc-300 outline-none focus:border-zinc-500"
           >
             <option value="all">All</option>
             <option value="metadata_update">Metadata Update</option>
@@ -137,7 +137,7 @@ export function LogViewer() {
               key={d}
               onClick={() => setDateFilter(d)}
               className={[
-                'rounded px-2 py-0.5 text-xs font-medium transition-colors',
+                'rounded px-2 py-0.5 text-sm font-medium transition-colors',
                 dateFilter === d
                   ? 'bg-blue-600 text-white'
                   : 'text-zinc-400 hover:bg-zinc-800',
@@ -168,22 +168,22 @@ export function LogViewer() {
             <li key={run.id} className="rounded-md border border-zinc-800">
               <button
                 onClick={() => setExpandedRunId(isExpanded ? null : run.id)}
-                className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left hover:bg-zinc-950"
+                className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left hover:bg-zinc-950"
               >
                 <div className="flex flex-col gap-0.5 min-w-0 flex-1">
                   <span className="text-sm font-medium text-zinc-100">
                     {formatOperationType(run.operationType)}
                   </span>
-                  <span className="text-xs text-zinc-500">
+                  <span className="text-sm text-zinc-500">
                     {formatDate(run.startedAt)} · {run.totalItems} items
                   </span>
                   {formatRunSummary(run) && (
-                    <span className="text-xs text-zinc-400 font-mono truncate">
+                    <span className="text-sm text-zinc-400 font-mono truncate">
                       {formatRunSummary(run)}
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-3 text-xs">
+                <div className="flex items-center gap-2 text-sm">
                   {run.finishedAt && (
                     <>
                       <span className="text-green-300 font-medium">{run.successfulItems} ok</span>
@@ -212,7 +212,7 @@ export function LogViewer() {
                               key={s}
                               onClick={() => setStatusFilter(s)}
                               className={[
-                                'rounded px-2 py-0.5 text-xs font-medium transition-colors',
+                                'rounded px-2 py-0.5 text-sm font-medium transition-colors',
                                 statusFilter === s
                                   ? 'bg-blue-600 text-white'
                                   : 'text-zinc-400 hover:bg-zinc-800',
@@ -228,7 +228,7 @@ export function LogViewer() {
                       {failedIdentifiers.length > 0 && (
                         <button
                           onClick={() => selectAll(failedIdentifiers)}
-                          className="text-xs text-red-400 hover:text-red-300"
+                          className="text-sm text-red-400 hover:text-red-300"
                         >
                           Re-select {failedIdentifiers.length} failed
                         </button>
@@ -239,7 +239,7 @@ export function LogViewer() {
                   {/* Entry list */}
                   <ul className="max-h-56 overflow-y-auto space-y-0.5">
                     {entries.map((entry) => (
-                      <li key={entry.id} className="flex flex-col gap-0.5 py-0.5 text-xs">
+                      <li key={entry.id} className="flex flex-col gap-0.5 py-0.5 text-sm">
                         <div className="flex items-center gap-2">
                           <EntryStatusBadge status={entry.status} />
                           <span className="font-mono text-zinc-300 truncate">{entry.identifier}</span>

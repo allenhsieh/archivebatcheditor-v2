@@ -57,12 +57,12 @@ export function MainView() {
   return (
     <div className="min-h-screen bg-zinc-950">
       <header className="border-b border-zinc-800 bg-zinc-900 px-6 py-4 shadow-sm">
-        <h1 className="text-lg font-semibold text-zinc-100">
+        <h1 className="text-xl font-semibold text-zinc-100">
           Archive.org Batch Editor
         </h1>
       </header>
 
-      <main className="mx-auto max-w-7xl space-y-4 px-6 py-6">
+      <main className="mx-auto max-w-7xl space-y-3 px-6 py-6">
         <SearchSection
           mode={mode}
           onModeChange={setMode}
@@ -73,10 +73,10 @@ export function MainView() {
             Items column has a fixed proportional width so it never resizes when
             the tools slide in — only the right-hand sidebar contents change. */}
         {mode.type !== 'idle' && (
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(380px,38%)]">
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(380px,38%)]">
             <ItemSelector mode={mode} onLoadingChange={setIsLoading} />
 
-            <aside className="flex flex-col gap-4 lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto lg:pr-1">
+            <aside className="flex flex-col gap-3 lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto lg:pr-1">
               {selectedCount > 0 ? (
                 <>
                   <MetadataEditor />
@@ -93,7 +93,7 @@ export function MainView() {
                     Click an item card to select it. Editor tools (metadata, flyer
                     upload, YouTube sync) will appear here.
                   </p>
-                  <p className="mt-2 text-xs text-zinc-500">
+                  <p className="mt-2 text-sm text-zinc-500">
                     Shortcuts: ⌘A select all · Esc clear
                   </p>
                 </div>

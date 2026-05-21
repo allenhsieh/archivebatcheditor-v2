@@ -13,7 +13,7 @@ export function ToastContainer() {
         <div
           key={toast.id}
           className={[
-            'flex items-start gap-3 rounded-lg border px-4 py-3 shadow-lg text-sm',
+            'flex items-start gap-2 rounded-lg border px-4 py-3 shadow-lg text-sm',
             toast.type === 'error' && 'border-red-900 bg-red-950/40 text-red-900',
             toast.type === 'warning' && 'border-amber-200 bg-amber-50 text-amber-900',
             toast.type === 'success' && 'border-green-200 bg-green-50 text-green-900',
