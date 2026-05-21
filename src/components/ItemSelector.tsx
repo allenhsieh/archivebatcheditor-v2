@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { ArchiveItem } from '@/types';
 import type { FetchMode } from './MainView';
@@ -36,9 +36,11 @@ async function fetchItems(mode: FetchMode): Promise<ItemsResponse> {
 }
 
 export function ItemSelector({ mode, onLoadingChange }: ItemSelectorProps) {
-  const { selectedIdentifiers, toggleSelection, selectAll, clearSelection, setItemsCache } =
+  const { selectedIdentifiers, toggleSelection, selectRange, selectAll, clearSelection, setItemsCache } =
     useUIStore();
   const addToast = useToastStore((s) => s.addToast);
+  // Anchor for shift-click range selection. Set on every plain (no-shift) click.
+  const anchorRef = useRef<string | null>(null);
 
   const queryKey =
     mode.type === 'user-items'
@@ -101,7 +103,8 @@ export function ItemSelector({ mode, onLoadingChange }: ItemSelectorProps) {
             </>
           )}
         </span>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-3">
+          <span className="hidden text-xs text-zinc-500 sm:inline">Shift+Click for range</span>
           <button
             onClick={() => selectAll(items.map((i) => i.identifier))}
             disabled={items.length === 0}
@@ -133,7 +136,14 @@ export function ItemSelector({ mode, onLoadingChange }: ItemSelectorProps) {
                 key={item.identifier}
                 item={item}
                 selected={selectedIdentifiers.has(item.identifier)}
-                onToggle={() => toggleSelection(item.identifier)}
+                onSelect={(shiftKey) => {
+                  if (shiftKey && anchorRef.current && anchorRef.current !== item.identifier) {
+                    selectRange(items.map((i) => i.identifier), anchorRef.current, item.identifier);
+                  } else {
+                    toggleSelection(item.identifier);
+                    anchorRef.current = item.identifier;
+                  }
+                }}
               />
             ))}
           </div>
@@ -146,29 +156,37 @@ export function ItemSelector({ mode, onLoadingChange }: ItemSelectorProps) {
 interface ItemCardProps {
   item: ArchiveItem;
   selected: boolean;
-  onToggle: () => void;
+  onSelect: (shiftKey: boolean) => void;
 }
 
-function ItemCard({ item, selected, onToggle }: ItemCardProps) {
+function ItemCard({ item, selected, onSelect }: ItemCardProps) {
   // Use a div (not a button) so we can nest an <a> link inside — HTML doesn't
   // allow interactive elements inside <button>. The link calls stopPropagation
   // so opening archive.org doesn't also toggle the selection.
   function onKey(e: React.KeyboardEvent<HTMLDivElement>) {
     if (e.key === ' ' || e.key === 'Enter') {
       e.preventDefault();
-      onToggle();
+      onSelect(e.shiftKey);
     }
+  }
+
+  function onClick(e: React.MouseEvent<HTMLDivElement>) {
+    // Shift-click in a browser also creates a text selection — clear it so the
+    // user doesn't see a flash of highlighted text across the range.
+    if (e.shiftKey) window.getSelection()?.removeAllRanges();
+    onSelect(e.shiftKey);
   }
 
   return (
     <div
       role="button"
       tabIndex={0}
-      onClick={onToggle}
+      onClick={onClick}
       onKeyDown={onKey}
       aria-pressed={selected}
+      title="Click to select · Shift+Click to select a range"
       className={[
-        'flex cursor-pointer flex-col gap-1 rounded-lg border bg-zinc-900 p-3 text-left shadow-sm transition-all',
+        'flex cursor-pointer flex-col gap-1 rounded-lg border bg-zinc-900 p-3 text-left shadow-sm transition-all select-none',
         'hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400',
         selected
           ? 'border-blue-500 ring-2 ring-blue-500'

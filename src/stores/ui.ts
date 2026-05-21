@@ -6,6 +6,9 @@ interface UIStore {
   itemsCache: Map<string, ArchiveItem>;
   youtubeMatches: Map<string, string>; // identifier → youtube videoId
   toggleSelection: (id: string) => void;
+  // Adds the inclusive [from..to] slice of `orderedIds` to the current selection.
+  // Used by shift-click range select; preserves prior selections.
+  selectRange: (orderedIds: string[], fromId: string, toId: string) => void;
   selectAll: (ids: string[]) => void;
   clearSelection: () => void;
   setItemsCache: (items: ArchiveItem[]) => void;
@@ -25,6 +28,17 @@ export const useUIStore = create<UIStore>((set) => ({
       } else {
         next.add(id);
       }
+      return { selectedIdentifiers: next };
+    }),
+
+  selectRange: (orderedIds, fromId, toId) =>
+    set((state) => {
+      const fromIdx = orderedIds.indexOf(fromId);
+      const toIdx = orderedIds.indexOf(toId);
+      if (fromIdx === -1 || toIdx === -1) return state;
+      const [start, end] = fromIdx <= toIdx ? [fromIdx, toIdx] : [toIdx, fromIdx];
+      const next = new Set(state.selectedIdentifiers);
+      for (let i = start; i <= end; i++) next.add(orderedIds[i]);
       return { selectedIdentifiers: next };
     }),
 
