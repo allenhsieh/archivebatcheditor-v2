@@ -67,21 +67,29 @@ export function MainView() {
           isLoading={isLoading}
         />
 
-        {/* Editor tools render above the items grid once a selection exists,
-            so you don't have to scroll past 500+ items to reach them. */}
-        {selectedCount > 0 && (
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <MetadataEditor />
-            <BatchImageUpload />
-            <YouTubeMatcher />
-            <YouTubeRecordingDateEditor />
-            <YouTubeTagsSync />
-            <YouTubeDescriptionSync />
-          </div>
-        )}
-
+        {/* When a selection exists, items stay in their column and the tools
+            slide in as a sticky side panel — no vertical jump on first select. */}
         {mode.type !== 'idle' && (
-          <ItemSelector mode={mode} onLoadingChange={setIsLoading} />
+          <div
+            className={
+              selectedCount > 0
+                ? 'grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(380px,38%)]'
+                : ''
+            }
+          >
+            <ItemSelector mode={mode} onLoadingChange={setIsLoading} />
+
+            {selectedCount > 0 && (
+              <aside className="flex flex-col gap-4 lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto lg:pr-1">
+                <MetadataEditor />
+                <BatchImageUpload />
+                <YouTubeMatcher />
+                <YouTubeRecordingDateEditor />
+                <YouTubeTagsSync />
+                <YouTubeDescriptionSync />
+              </aside>
+            )}
+          </div>
         )}
 
         <YouTubeSection />
