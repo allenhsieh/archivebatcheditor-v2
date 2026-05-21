@@ -154,9 +154,14 @@ export function YouTubeMatcher() {
 
   return (
     <div className="flex flex-col gap-4 rounded-lg border border-zinc-800 bg-zinc-900 p-4 shadow-sm">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-1">
         <h2 className="text-sm font-semibold text-zinc-100">YouTube Matcher</h2>
-        <p className="text-xs text-zinc-500">Matches from local cache — no API quota used</p>
+        <p className="text-xs text-zinc-400">
+          Finds each item&apos;s YouTube video by title + date, then writes that URL to the
+          Archive.org item&apos;s <code className="rounded bg-zinc-800 px-1 py-0.5 text-[11px] text-zinc-300">youtube</code> field.
+          Each selected item gets its own match — required before Recording Dates / Tags / Description sync.
+        </p>
+        <p className="text-xs text-zinc-500">Matches from local cache — no API quota used.</p>
       </div>
 
       <div className="flex items-center gap-2">
