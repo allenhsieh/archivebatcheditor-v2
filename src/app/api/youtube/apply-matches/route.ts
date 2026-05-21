@@ -56,7 +56,10 @@ export async function POST(req: NextRequest) {
       send({ type: 'progress', current: i + 1, total: matches.length, identifier, status: 'processing' });
 
       try {
-        const result = await updateMetadata(identifier, [{ op: 'replace', path: '/youtube', value: url }]);
+        // Use `add` rather than `replace` — `replace` rejects when the field is
+        // currently missing (Archive.org returns 400). `add` works whether the
+        // youtube field already exists (overwrites it) or not (creates it).
+        const result = await updateMetadata(identifier, [{ op: 'add', path: '/youtube', value: url }]);
 
         if (result.noChanges) {
           noChange++;
