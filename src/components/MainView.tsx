@@ -70,7 +70,7 @@ export function MainView() {
         {/* Editor tools render above the items grid once a selection exists,
             so you don't have to scroll past 500+ items to reach them. */}
         {selectedCount > 0 && (
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <MetadataEditor />
             <BatchImageUpload />
             <YouTubeMatcher />
