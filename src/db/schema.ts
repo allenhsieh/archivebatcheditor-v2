@@ -46,6 +46,10 @@ export const youtubeChannelCacheVideos = sqliteTable(
     title: text('title').notNull(),
     publishedAt: integer('published_at', { mode: 'timestamp' }).notNull(),
     url: text('url').notNull(),
+    // Stored so bulk find/replace on descriptions can run client-side without
+    // re-querying YouTube. Pulled from playlistItems.snippet.description (free,
+    // same quota as the rest of the cache build).
+    description: text('description'),
   }
 );
 

@@ -9,6 +9,7 @@ interface PlaylistItem {
     resourceId: { videoId: string };
     title: string;
     publishedAt: string;
+    description?: string;
   };
 }
 
@@ -39,7 +40,7 @@ export async function fetchAndCacheChannelVideos(): Promise<{ videoCount: number
 
   // UC→UU gives the uploads playlist for any channel
   const uploadsPlaylistId = channelId.replace(/^UC/, 'UU');
-  const videos: { videoId: string; title: string; publishedAt: Date; url: string }[] = [];
+  const videos: { videoId: string; title: string; publishedAt: Date; url: string; description: string | null }[] = [];
   let pageToken: string | undefined;
 
   do {
@@ -66,6 +67,7 @@ export async function fetchAndCacheChannelVideos(): Promise<{ videoCount: number
         title: item.snippet.title,
         publishedAt: new Date(item.snippet.publishedAt),
         url: createYouTubeUrl(item.snippet.resourceId.videoId),
+        description: item.snippet.description ?? null,
       });
     }
 

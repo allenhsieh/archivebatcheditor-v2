@@ -1,0 +1,1 @@
+ALTER TABLE `youtube_channel_cache_videos` ADD `description` text;
