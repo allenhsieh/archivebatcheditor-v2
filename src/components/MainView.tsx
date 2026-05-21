@@ -12,6 +12,7 @@ import { YouTubeDescriptionSync } from './editors/YouTubeDescriptionSync';
 import { LogViewer } from './LogViewer';
 import { LiveLog } from './LiveLog';
 import { YouTubeSection } from './YouTubeSection';
+import { RetryQueueSection } from './RetryQueueSection';
 import { YouTubeDescriptionCleanup } from './editors/YouTubeDescriptionCleanup';
 import { ToastContainer } from './ToastContainer';
 import { useUIStore } from '@/stores/ui';
@@ -102,6 +103,7 @@ export function MainView() {
         )}
 
         <YouTubeSection />
+        <RetryQueueSection />
         <YouTubeDescriptionCleanup />
         <LiveLog />
         <LogViewer />

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLogStore } from '@/stores/log';
 import { useSSEStream } from '@/hooks/useSSEStream';
@@ -52,6 +52,8 @@ export function YouTubeDescriptionCleanup() {
   const [accepted, setAccepted] = useState<Set<string>>(new Set());
   const [progress, setProgress] = useState<Record<string, ItemProgress>>({});
   const [summary, setSummary] = useState<SSECompleteEvent | null>(null);
+  // Anchor for shift-click range selection across matched rows.
+  const anchorRef = useRef<string | null>(null);
 
   const handleEvent = useCallback(
     (event: SSEEvent) => {
@@ -91,7 +93,10 @@ export function YouTubeDescriptionCleanup() {
       if (!res.ok) throw new Error('error' in body && body.error ? body.error : `Search failed: ${res.status}`);
       const data = body as SearchResponse;
       setMatches(data.matches);
-      setAccepted(new Set(data.matches.map((m) => m.videoId)));
+      // Default to NO selections — user picks what to apply. Click any row,
+      // then shift-click another to select a range.
+      setAccepted(new Set());
+      anchorRef.current = null;
       setSearched(true);
       if (data.withDescriptionField === 0) {
         setSearchError('No descriptions in cache. Click "Refresh cache" in the YouTube section first.');
@@ -103,13 +108,41 @@ export function YouTubeDescriptionCleanup() {
     }
   }
 
-  function toggleAccepted(videoId: string) {
+  function toggleAccepted(videoId: string, shiftKey: boolean) {
     setAccepted((prev) => {
       const next = new Set(prev);
-      if (next.has(videoId)) next.delete(videoId);
-      else next.add(videoId);
+      if (shiftKey && anchorRef.current && anchorRef.current !== videoId) {
+        // Range select: every match between anchor and target, inclusive.
+        // The target row's existing state decides whether to add or remove the
+        // whole range — matches the convention from typical file managers.
+        const ids = matches.map((m) => m.videoId);
+        const a = ids.indexOf(anchorRef.current);
+        const b = ids.indexOf(videoId);
+        if (a !== -1 && b !== -1) {
+          const [start, end] = a <= b ? [a, b] : [b, a];
+          const shouldSelect = !next.has(videoId);
+          for (let i = start; i <= end; i++) {
+            if (shouldSelect) next.add(ids[i]);
+            else next.delete(ids[i]);
+          }
+        }
+      } else {
+        if (next.has(videoId)) next.delete(videoId);
+        else next.add(videoId);
+        anchorRef.current = videoId;
+      }
       return next;
     });
+  }
+
+  function selectAllMatches() {
+    setAccepted(new Set(matches.map((m) => m.videoId)));
+    anchorRef.current = matches[0]?.videoId ?? null;
+  }
+
+  function clearSelection() {
+    setAccepted(new Set());
+    anchorRef.current = null;
   }
 
   function applyCleanup() {
@@ -210,10 +243,31 @@ export function YouTubeDescriptionCleanup() {
 
       {matches.length > 0 && (
         <div className="flex flex-col gap-1">
-          <p className="text-xs font-medium text-zinc-400">
-            {matches.length} match{matches.length !== 1 ? 'es' : ''} ·{' '}
-            <span className="text-zinc-500">click rows to include/exclude before applying</span>
-          </p>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs font-medium text-zinc-400">
+              {matches.length} match{matches.length !== 1 ? 'es' : ''} ·{' '}
+              <span className="text-zinc-500">
+                {accepted.size} selected · click to toggle, shift+click for range
+              </span>
+            </p>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={selectAllMatches}
+                disabled={accepted.size === matches.length}
+                className="text-xs text-zinc-400 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Select all
+              </button>
+              {accepted.size > 0 && (
+                <button
+                  onClick={clearSelection}
+                  className="text-xs text-zinc-400 hover:text-zinc-100"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          </div>
           <ul className="max-h-80 overflow-y-auto divide-y divide-zinc-800 rounded-md border border-zinc-800">
             {matches.map((m) => {
               const itemProgress = progress[m.videoId];
@@ -221,17 +275,26 @@ export function YouTubeDescriptionCleanup() {
               return (
                 <li
                   key={m.videoId}
+                  onClick={(e) => {
+                    if (itemProgress) return;
+                    if (e.shiftKey) window.getSelection()?.removeAllRanges();
+                    toggleAccepted(m.videoId, e.shiftKey);
+                  }}
                   className={[
-                    'flex items-start gap-3 px-3 py-2.5 transition-colors',
-                    isAccepted ? '' : 'opacity-40',
+                    'flex items-start gap-3 px-3 py-2.5 transition-colors select-none',
+                    itemProgress ? '' : 'cursor-pointer hover:bg-zinc-950/60',
+                    isAccepted ? 'bg-blue-950/30' : '',
                   ].join(' ')}
+                  title={itemProgress ? undefined : 'Click to toggle · Shift+Click for range'}
                 >
                   {!itemProgress && (
                     <input
                       type="checkbox"
                       checked={isAccepted}
-                      onChange={() => toggleAccepted(m.videoId)}
-                      className="mt-0.5 h-4 w-4 shrink-0 accent-blue-500"
+                      onChange={() => {}}
+                      onClick={(e) => e.stopPropagation()}
+                      readOnly
+                      className="mt-0.5 h-4 w-4 shrink-0 accent-blue-500 pointer-events-none"
                     />
                   )}
                   {itemProgress && <span className="mt-0.5 h-4 w-4 shrink-0" />}
@@ -241,6 +304,7 @@ export function YouTubeDescriptionCleanup() {
                       href={m.url}
                       target="_blank"
                       rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
                       className="truncate text-xs text-blue-400 hover:underline"
                     >
                       {m.title}

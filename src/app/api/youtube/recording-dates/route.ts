@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { createSSEStream, sseHeaders } from '@/lib/sse';
 import { createOperationRun, finishOperationRun, addActivityLogEntry } from '@/lib/activityLog';
 import { getAuthenticatedYouTubeClient, markTokenRevoked } from '@/lib/youtube/client';
-import { enqueueForRetry, removeFromRetryQueue } from '@/lib/youtube/retryQueue';
+import { removeFromRetryQueue } from '@/lib/youtube/retryQueue';
+import { enqueueRemainingForRetry } from '@/lib/youtube/abortBatch';
 import { isYouTubeAuthError, isYouTubeQuotaError } from '@/lib/youtube/errors';
 
 const RequestSchema = z.object({
@@ -65,29 +66,12 @@ export async function POST(req: NextRequest) {
 
     let successful = 0;
     let failed = 0;
-    let abortReason: 'auth' | 'quota' | null = null;
+    let queuedForRetry = 0;
     const results: Array<{ identifier: string; success: boolean; error?: string }> = [];
 
     for (let i = 0; i < updates.length; i++) {
       const { identifier, videoId, recordingDate } = updates[i];
       send({ type: 'progress', current: i + 1, total: updates.length, identifier, status: 'processing' });
-
-      if (abortReason) {
-        failed++;
-        const errMsg = abortReason === 'auth' ? 'Auth expired' : 'Quota exhausted';
-        // On quota abort, queue remaining items so they're retried when quota resets.
-        // On auth abort, don't queue — token is invalid and items would just fail again.
-        if (abortReason === 'quota') {
-          enqueueForRetry(
-            { operationType: 'recording_date', archiveIdentifier: identifier, youtubeVideoId: videoId, payload: { recordingDate } },
-            errMsg
-          );
-        }
-        addActivityLogEntry({ operationRunId: operationId, identifier, status: 'failure', errorMessage: errMsg });
-        results.push({ identifier, success: false, error: errMsg });
-        send({ type: 'progress', current: i + 1, total: updates.length, identifier, status: 'error', error: errMsg });
-        continue;
-      }
 
       try {
         await youtube.videos.update({
@@ -104,13 +88,39 @@ export async function POST(req: NextRequest) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
         if (isYouTubeAuthError(error)) {
-          abortReason = 'auth';
           void markTokenRevoked();
-          console.warn(`🔑 YouTube auth expired during recording date update — aborting`);
-        } else if (isYouTubeQuotaError(error)) {
-          abortReason = 'quota';
-          enqueueForRetry({ operationType: 'recording_date', archiveIdentifier: identifier, youtubeVideoId: videoId, payload: { recordingDate } }, errorMessage);
-          console.log(`📊 YouTube quota exhausted — queued ${identifier} for retry`);
+          failed++;
+          addActivityLogEntry({ operationRunId: operationId, identifier, status: 'failure', errorMessage: 'Auth expired — re-authorize YouTube' });
+          results.push({ identifier, success: false, error: 'Auth expired' });
+          send({ type: 'progress', current: i + 1, total: updates.length, identifier, status: 'error', error: 'Auth expired — re-authorize YouTube' });
+          console.warn(`🔑 YouTube auth expired during recording date update — aborting batch (${updates.length - i - 1} item(s) skipped)`);
+          break;
+        }
+
+        if (isYouTubeQuotaError(error)) {
+          const remaining = updates.slice(i).map((u) => ({
+            archiveIdentifier: u.identifier,
+            youtubeVideoId: u.videoId,
+            payload: { recordingDate: u.recordingDate },
+          }));
+          queuedForRetry = enqueueRemainingForRetry('recording_date', remaining, errorMessage);
+          addActivityLogEntry({
+            operationRunId: operationId,
+            identifier,
+            status: 'failure',
+            errorMessage: `Quota exhausted — ${queuedForRetry} item(s) queued for retry`,
+          });
+          results.push({ identifier, success: false, error: 'Quota exhausted' });
+          send({
+            type: 'progress',
+            current: i + 1,
+            total: updates.length,
+            identifier,
+            status: 'error',
+            error: `Quota exhausted — ${queuedForRetry} item${queuedForRetry !== 1 ? 's' : ''} queued for retry`,
+          });
+          console.log(`📊 YouTube quota exhausted at item ${i + 1}/${updates.length} — queued ${queuedForRetry} for retry`);
+          break;
         }
 
         failed++;
@@ -120,12 +130,12 @@ export async function POST(req: NextRequest) {
         results.push({ identifier, success: false, error: errorMessage });
       }
 
-      if (i < updates.length - 1 && !abortReason) await sleep(200);
+      if (i < updates.length - 1) await sleep(200);
     }
 
-    finishOperationRun(operationId, { successfulItems: successful, noChangeItems: 0, failedItems: failed });
-    console.log(`🎬 Recording date update complete: ${successful} ok, ${failed} failed`);
-    send({ type: 'complete', total: updates.length, successful, failed, noChange: 0, results });
+    finishOperationRun(operationId, { successfulItems: successful, noChangeItems: 0, failedItems: failed + queuedForRetry });
+    console.log(`🎬 Recording date update complete: ${successful} ok, ${failed} failed${queuedForRetry > 0 ? `, ${queuedForRetry} queued for retry` : ''}`);
+    send({ type: 'complete', total: updates.length, successful, failed: failed + queuedForRetry, noChange: 0, results });
   });
 
   return new Response(stream, { headers: sseHeaders() });

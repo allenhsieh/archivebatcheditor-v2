@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { createSSEStream, sseHeaders } from '@/lib/sse';
 import { createOperationRun, finishOperationRun, addActivityLogEntry } from '@/lib/activityLog';
 import { getAuthenticatedYouTubeClient, markTokenRevoked } from '@/lib/youtube/client';
-import { enqueueForRetry, removeFromRetryQueue } from '@/lib/youtube/retryQueue';
+import { removeFromRetryQueue } from '@/lib/youtube/retryQueue';
+import { enqueueRemainingForRetry } from '@/lib/youtube/abortBatch';
 import { isYouTubeAuthError, isYouTubeQuotaError } from '@/lib/youtube/errors';
 
 const RequestSchema = z.object({
@@ -92,30 +93,14 @@ export async function POST(req: NextRequest) {
 
     let successful = 0;
     let failed = 0;
-    let abortReason: 'auth' | 'quota' | null = null;
+    let queuedForRetry = 0;
     const results: Array<{ identifier: string; success: boolean; error?: string }> = [];
 
     for (let i = 0; i < updates.length; i++) {
       const { identifier, videoId, tags } = updates[i];
       send({ type: 'progress', current: i + 1, total: updates.length, identifier, status: 'processing' });
 
-      if (abortReason) {
-        failed++;
-        const errMsg = abortReason === 'auth' ? 'Auth expired' : 'Quota exhausted';
-        if (abortReason === 'quota') {
-          enqueueForRetry(
-            { operationType: 'tags', archiveIdentifier: identifier, youtubeVideoId: videoId, payload: { tags } },
-            errMsg
-          );
-        }
-        addActivityLogEntry({ operationRunId: operationId, identifier, status: 'failure', errorMessage: errMsg });
-        results.push({ identifier, success: false, error: errMsg });
-        send({ type: 'progress', current: i + 1, total: updates.length, identifier, status: 'error', error: errMsg });
-        continue;
-      }
-
       try {
-        // Fetch existing snippet to preserve title/categoryId/description and merge tags
         const listRes = await youtube.videos.list({ part: ['snippet'], id: [videoId] });
         const existing = listRes.data.items?.[0]?.snippet;
         if (!existing) throw new Error('Video not found or not owned by authenticated account');
@@ -145,16 +130,47 @@ export async function POST(req: NextRequest) {
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
+        // Auth abort: token is invalid, retrying won't help. Mark revoked, fail
+        // this item, stop the batch.
         if (isYouTubeAuthError(error)) {
-          abortReason = 'auth';
           void markTokenRevoked();
-          console.warn(`🔑 YouTube auth expired during tag update — aborting`);
-        } else if (isYouTubeQuotaError(error)) {
-          abortReason = 'quota';
-          enqueueForRetry({ operationType: 'tags', archiveIdentifier: identifier, youtubeVideoId: videoId, payload: { tags } }, errorMessage);
-          console.log(`📊 YouTube quota exhausted — queued ${identifier} for retry`);
+          failed++;
+          addActivityLogEntry({ operationRunId: operationId, identifier, status: 'failure', errorMessage: 'Auth expired — re-authorize YouTube' });
+          results.push({ identifier, success: false, error: 'Auth expired' });
+          send({ type: 'progress', current: i + 1, total: updates.length, identifier, status: 'error', error: 'Auth expired — re-authorize YouTube' });
+          console.warn(`🔑 YouTube auth expired during tag update — aborting batch (${updates.length - i - 1} item(s) skipped)`);
+          break;
         }
 
+        // Quota abort: queue this item + every remaining item for later drain.
+        // Emit ONE summary event so the UI doesn't fire an error per item.
+        if (isYouTubeQuotaError(error)) {
+          const remaining = updates.slice(i).map((u) => ({
+            archiveIdentifier: u.identifier,
+            youtubeVideoId: u.videoId,
+            payload: { tags: u.tags },
+          }));
+          queuedForRetry = enqueueRemainingForRetry('tags', remaining, errorMessage);
+          addActivityLogEntry({
+            operationRunId: operationId,
+            identifier,
+            status: 'failure',
+            errorMessage: `Quota exhausted — ${queuedForRetry} item(s) queued for retry`,
+          });
+          results.push({ identifier, success: false, error: 'Quota exhausted' });
+          send({
+            type: 'progress',
+            current: i + 1,
+            total: updates.length,
+            identifier,
+            status: 'error',
+            error: `Quota exhausted — ${queuedForRetry} item${queuedForRetry !== 1 ? 's' : ''} queued for retry`,
+          });
+          console.log(`📊 YouTube quota exhausted at item ${i + 1}/${updates.length} — queued ${queuedForRetry} for retry`);
+          break;
+        }
+
+        // Per-item failure, batch continues.
         failed++;
         addActivityLogEntry({ operationRunId: operationId, identifier, status: 'failure', errorMessage });
         console.error(`🏷️  ❌ ${identifier} (yt:${videoId}): ${errorMessage}`);
@@ -162,12 +178,14 @@ export async function POST(req: NextRequest) {
         results.push({ identifier, success: false, error: errorMessage });
       }
 
-      if (i < updates.length - 1 && !abortReason) await sleep(200);
+      if (i < updates.length - 1) await sleep(200);
     }
 
-    finishOperationRun(operationId, { successfulItems: successful, noChangeItems: 0, failedItems: failed });
-    console.log(`🏷️  Tag update complete: ${successful} ok, ${failed} failed`);
-    send({ type: 'complete', total: updates.length, successful, failed, noChange: 0, results });
+    // Items queued for retry count as failed in the operation_run summary so the
+    // log row's "X failed" reflects total work not done.
+    finishOperationRun(operationId, { successfulItems: successful, noChangeItems: 0, failedItems: failed + queuedForRetry });
+    console.log(`🏷️  Tag update complete: ${successful} ok, ${failed} failed${queuedForRetry > 0 ? `, ${queuedForRetry} queued for retry` : ''}`);
+    send({ type: 'complete', total: updates.length, successful, failed: failed + queuedForRetry, noChange: 0, results });
   });
 
   return new Response(stream, { headers: sseHeaders() });
