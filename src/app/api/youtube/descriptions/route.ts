@@ -75,6 +75,12 @@ export async function POST(req: NextRequest) {
       if (abortReason) {
         failed++;
         const errMsg = abortReason === 'auth' ? 'Auth expired' : 'Quota exhausted';
+        if (abortReason === 'quota') {
+          enqueueForRetry(
+            { operationType: 'description', archiveIdentifier: identifier, youtubeVideoId: videoId, payload: { description } },
+            errMsg
+          );
+        }
         addActivityLogEntry({ operationRunId: operationId, identifier, status: 'failure', errorMessage: errMsg });
         results.push({ identifier, success: false, error: errMsg });
         send({ type: 'progress', current: i + 1, total: updates.length, identifier, status: 'error', error: errMsg });

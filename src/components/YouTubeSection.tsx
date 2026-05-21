@@ -38,7 +38,12 @@ async function triggerCacheRefresh(): Promise<{ videoCount: number }> {
 export function YouTubeSection() {
   const qc = useQueryClient();
   const addLine = useLogStore((s) => s.addLine);
-  const [authError, setAuthError] = useState<string | null>(null);
+  // Initialize from URL synchronously so we don't setState inside an effect.
+  const [authError, setAuthError] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    const params = new URLSearchParams(window.location.search);
+    return params.get('youtube_auth') === 'error' ? (params.get('reason') ?? 'OAuth failed') : null;
+  });
 
   const { data: auth } = useQuery({
     queryKey: ['youtube-auth-status'],
@@ -74,8 +79,7 @@ export function YouTubeSection() {
       void qc.invalidateQueries({ queryKey: ['youtube-auth-status'] });
       window.history.replaceState({}, '', '/');
     } else if (result === 'error') {
-      const reason = params.get('reason') ?? 'OAuth failed';
-      setAuthError(reason);
+      // authError was already initialized from URL above; just clean the URL.
       window.history.replaceState({}, '', '/');
     }
   }, [qc]);

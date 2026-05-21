@@ -1,6 +1,7 @@
 import { type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { searchItems } from '@/lib/archive/client';
+import { env } from '@/lib/env';
 
 const querySchema = z.object({
   q: z.string().min(1, 'Query is required'),
@@ -21,8 +22,12 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  // Always scope user searches to the configured uploader — this is a single-user
+  // editor for the user's own collection, not a general Archive.org search tool.
+  const scopedQuery = `(${parsed.data.q}) AND uploader:${env.ARCHIVE_EMAIL}`;
+
   try {
-    const items = await searchItems(parsed.data.q, undefined, parsed.data.rows);
+    const items = await searchItems(scopedQuery, undefined, parsed.data.rows);
     return Response.json({ items, total: items.length });
   } catch (error) {
     return Response.json(

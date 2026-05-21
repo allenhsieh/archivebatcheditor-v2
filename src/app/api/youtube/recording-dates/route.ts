@@ -75,6 +75,14 @@ export async function POST(req: NextRequest) {
       if (abortReason) {
         failed++;
         const errMsg = abortReason === 'auth' ? 'Auth expired' : 'Quota exhausted';
+        // On quota abort, queue remaining items so they're retried when quota resets.
+        // On auth abort, don't queue — token is invalid and items would just fail again.
+        if (abortReason === 'quota') {
+          enqueueForRetry(
+            { operationType: 'recording_date', archiveIdentifier: identifier, youtubeVideoId: videoId, payload: { recordingDate } },
+            errMsg
+          );
+        }
         addActivityLogEntry({ operationRunId: operationId, identifier, status: 'failure', errorMessage: errMsg });
         results.push({ identifier, success: false, error: errMsg });
         send({ type: 'progress', current: i + 1, total: updates.length, identifier, status: 'error', error: errMsg });
