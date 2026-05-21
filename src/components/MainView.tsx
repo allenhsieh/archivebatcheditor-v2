@@ -76,7 +76,7 @@ export function MainView() {
           <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(380px,38%)]">
             <ItemSelector mode={mode} onLoadingChange={setIsLoading} />
 
-            <aside className="flex flex-col gap-3 lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto lg:pr-1">
+            <aside className="flex flex-col gap-3 min-w-0 lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto lg:overflow-x-hidden lg:pr-1">
               {selectedCount > 0 ? (
                 <>
                   <MetadataEditor />

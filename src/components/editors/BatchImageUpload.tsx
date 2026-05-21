@@ -106,35 +106,33 @@ export function BatchImageUpload() {
         Upload one image — it will be set as the cover/thumbnail on all {selectedList.length} selected item{selectedList.length !== 1 ? 's' : ''}.
       </p>
 
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-        <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-zinc-400">Image file</label>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isRunning}
-              className="rounded-md border border-zinc-700 px-3 py-2 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-950 disabled:opacity-50"
-            >
-              {file ? 'Change file' : 'Choose file…'}
-            </button>
-            {file && (
-              <span className="text-sm text-zinc-400 truncate max-w-xs">
-                {file.name} <span className="text-zinc-500">({(file.size / 1024).toFixed(0)} KB)</span>
-              </span>
-            )}
-          </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif,.heic,.heif"
-            onChange={handleFileChange}
-            className="sr-only"
-          />
-          {fileError && <p className="text-sm text-red-400">{fileError}</p>}
+      <div className="flex flex-col gap-2">
+        <label className="text-sm font-medium text-zinc-400">Image file</label>
+        <div className="flex items-center gap-2 min-w-0">
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isRunning}
+            className="shrink-0 rounded-md border border-zinc-700 px-3 py-2 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-950 disabled:opacity-50"
+          >
+            {file ? 'Change file' : 'Choose file…'}
+          </button>
+          {file && (
+            <span className="text-sm text-zinc-400 truncate min-w-0">
+              {file.name} <span className="text-zinc-500">({(file.size / 1024).toFixed(0)} KB)</span>
+            </span>
+          )}
         </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif,.heic,.heif"
+          onChange={handleFileChange}
+          className="sr-only"
+        />
+        {fileError && <p className="text-sm text-red-400">{fileError}</p>}
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button
             onClick={handleStart}
             disabled={!file || isRunning || selectedList.length === 0}

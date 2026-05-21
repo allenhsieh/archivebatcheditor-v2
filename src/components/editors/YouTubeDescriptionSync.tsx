@@ -70,7 +70,7 @@ export function YouTubeDescriptionSync() {
 
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-zinc-800 bg-zinc-900 p-3 shadow-sm">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-1">
         <h2 className="text-base font-semibold text-zinc-100">YouTube Description Sync</h2>
         <p className="text-sm text-zinc-500">Pushes Archive.org description → YouTube video description</p>
       </div>
