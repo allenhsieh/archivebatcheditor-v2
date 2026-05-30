@@ -64,7 +64,9 @@ export function RetryQueueSection() {
   });
 
   const totalPending = status?.pending ?? 0;
-  const stuck = (status?.failed_terminal ?? 0) + (status?.auth_expired ?? 0);
+  const authBlocked = status?.auth_expired ?? 0;
+  const stuck = (status?.failed_terminal ?? 0) + authBlocked;
+  const totalRetryable = totalPending + authBlocked;
 
   // Hide entirely when there's nothing to retry — keeps the page quiet.
   if (totalPending === 0 && stuck === 0) return null;
@@ -89,13 +91,13 @@ export function RetryQueueSection() {
           )}
         </div>
         <div className="flex items-center gap-2">
-          {totalPending > 0 && (
+          {totalRetryable > 0 && (
             <button
               onClick={() => drainMut.mutate()}
               disabled={drainMut.isPending}
               className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {drainMut.isPending ? 'Retrying…' : `Retry ${totalPending} pending`}
+              {drainMut.isPending ? 'Retrying…' : `Retry ${totalRetryable} pending`}
             </button>
           )}
         </div>

@@ -178,7 +178,13 @@ export interface DrainSummary {
 }
 
 export async function drainRetryQueue(): Promise<DrainSummary> {
-  const pending = db
+  const authExpiredCount = db
+    .select()
+    .from(youtubeRetryQueue)
+    .where(eq(youtubeRetryQueue.status, 'auth_expired'))
+    .all().length;
+
+  const initialPending = db
     .select()
     .from(youtubeRetryQueue)
     .where(eq(youtubeRetryQueue.status, 'pending'))
@@ -188,12 +194,12 @@ export async function drainRetryQueue(): Promise<DrainSummary> {
     attempted: 0,
     succeeded: 0,
     failed: 0,
-    remaining: pending.length,
+    remaining: initialPending.length + authExpiredCount,
     quotaHit: false,
     authExpired: false,
   };
 
-  if (pending.length === 0) return summary;
+  if (initialPending.length === 0 && authExpiredCount === 0) return summary;
 
   let youtube: YouTubeClient;
   try {
@@ -202,6 +208,25 @@ export async function drainRetryQueue(): Promise<DrainSummary> {
     console.warn('Retry queue: YouTube not authenticated, skipping drain');
     return summary;
   }
+
+  // Auth is valid — reset any items blocked on a previous auth failure so they
+  // get picked up in this drain.
+  const resetCount = db
+    .update(youtubeRetryQueue)
+    .set({ status: 'pending', lastError: null })
+    .where(eq(youtubeRetryQueue.status, 'auth_expired'))
+    .run().changes;
+  if (resetCount > 0) {
+    console.log(`♻️  Reset ${resetCount} auth_expired item(s) to pending`);
+  }
+
+  // Re-fetch so auth_expired items (now pending) are included.
+  const pending = db
+    .select()
+    .from(youtubeRetryQueue)
+    .where(eq(youtubeRetryQueue.status, 'pending'))
+    .all();
+  summary.remaining = pending.length;
 
   console.log(`♻️  Retry queue: ${pending.length} item(s) pending, starting drain...`);
 
