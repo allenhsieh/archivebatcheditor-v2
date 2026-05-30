@@ -102,10 +102,27 @@ describe('planPatches: remove semantics', () => {
     expect(patches).toEqual([]);
   });
 
-  it('keeps remove when array contains the value', () => {
+  it('removes only the matching index from a multi-value array (not the whole field)', () => {
     const patches = planPatches(
       [{ field: 'subject', value: 'punk', operation: 'remove' }],
       { ...baseItem, subject: ['punk', 'hardcore'] },
+    );
+    // 'punk' is at index 0 — target it specifically so 'hardcore' survives.
+    expect(patches).toEqual([{ op: 'remove', path: '/subject/0', value: 'punk' }]);
+  });
+
+  it('targets the correct index when the value is not first', () => {
+    const patches = planPatches(
+      [{ field: 'subject', value: 'hardcore', operation: 'remove' }],
+      { ...baseItem, subject: ['punk', 'hardcore', 'emo'] },
+    );
+    expect(patches).toEqual([{ op: 'remove', path: '/subject/1', value: 'hardcore' }]);
+  });
+
+  it('removes the whole field when the value is the sole array element', () => {
+    const patches = planPatches(
+      [{ field: 'subject', value: 'punk', operation: 'remove' }],
+      { ...baseItem, subject: ['punk'] },
     );
     expect(patches).toEqual([{ op: 'remove', path: '/subject', value: 'punk' }]);
   });
@@ -116,6 +133,22 @@ describe('planPatches: remove semantics', () => {
       { ...baseItem, title: 'Bad' },
     );
     expect(patches).toEqual([{ op: 'remove', path: '/title', value: 'Bad' }]);
+  });
+
+  it('removes the whole field when value is empty (UI "remove field" case)', () => {
+    const patches = planPatches(
+      [{ field: 'title', value: '', operation: 'remove' }],
+      { ...baseItem, title: 'Some Title' },
+    );
+    expect(patches).toEqual([{ op: 'remove', path: '/title', value: '' }]);
+  });
+
+  it('drops empty-value remove when the field is already absent', () => {
+    const patches = planPatches(
+      [{ field: 'venue', value: '', operation: 'remove' }],
+      baseItem,
+    );
+    expect(patches).toEqual([]);
   });
 });
 

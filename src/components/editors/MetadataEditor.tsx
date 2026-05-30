@@ -159,19 +159,26 @@ export function MetadataEditor() {
         </div>
       )}
 
-      {operation !== 'remove' && (
-        <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-zinc-400">Value</label>
-          <input
-            type="text"
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            placeholder="Enter value…"
-            disabled={isRunning}
-            className="w-full rounded-md border border-zinc-700 px-3 py-2 text-sm outline-none focus:border-zinc-400 focus:ring-1 focus:ring-zinc-400 disabled:opacity-50"
-          />
-        </div>
-      )}
+      <div className="flex flex-col gap-1">
+        <label className="text-sm font-medium text-zinc-400">
+          {operation === 'remove' ? 'Value to remove' : 'Value'}
+        </label>
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder={operation === 'remove' ? 'Leave empty to remove the whole field' : 'Enter value…'}
+          disabled={isRunning}
+          className="w-full rounded-md border border-zinc-700 px-3 py-2 text-sm outline-none focus:border-zinc-400 focus:ring-1 focus:ring-zinc-400 disabled:opacity-50"
+        />
+        {operation === 'remove' && (
+          <p className="text-xs text-zinc-500">
+            Empty removes the entire{' '}
+            <span className="font-mono text-zinc-400">{activeField || 'field'}</span> field. Enter a
+            value to remove just that one entry from a multi-value field (e.g. a single subject tag).
+          </p>
+        )}
+      </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <label className="flex items-center gap-1.5 cursor-pointer select-none">

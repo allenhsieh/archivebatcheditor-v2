@@ -22,6 +22,11 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// Dry-run only issues GET pre-reads (no writes), so it doesn't need the full
+// inter-write pacing — a light read delay keeps a 200-item preview from stalling
+// for minutes while still going sequentially.
+const DRY_RUN_DELAY_MS = 150;
+
 export async function POST(req: NextRequest) {
   let body: unknown;
   try {
@@ -137,7 +142,7 @@ export async function POST(req: NextRequest) {
         results.push({ identifier, success: false, error: errorMessage });
       }
 
-      if (i < items.length - 1) await sleep(API_DELAY_MS);
+      if (i < items.length - 1) await sleep(dryRun ? DRY_RUN_DELAY_MS : API_DELAY_MS);
     }
 
     if (!dryRun) {

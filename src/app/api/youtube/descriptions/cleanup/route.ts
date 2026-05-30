@@ -88,21 +88,11 @@ export async function POST(req: NextRequest) {
     let successful = 0;
     let failed = 0;
     let noChange = 0;
-    let abortReason: 'auth' | 'quota' | null = null;
     const results: Array<{ identifier: string; success: boolean; noChange?: boolean; error?: string }> = [];
 
     for (let i = 0; i < videoIds.length; i++) {
       const videoId = videoIds[i];
       send({ type: 'progress', current: i + 1, total: videoIds.length, identifier: videoId, status: 'processing' });
-
-      if (abortReason) {
-        failed++;
-        const errMsg = abortReason === 'auth' ? 'Auth expired' : 'Quota exhausted';
-        addActivityLogEntry({ operationRunId: operationId, identifier: videoId, status: 'failure', errorMessage: errMsg });
-        results.push({ identifier: videoId, success: false, error: errMsg });
-        send({ type: 'progress', current: i + 1, total: videoIds.length, identifier: videoId, status: 'error', error: errMsg });
-        continue;
-      }
 
       try {
         const listRes = await youtube.videos.list({ part: ['snippet'], id: [videoId] });
@@ -163,13 +153,32 @@ export async function POST(req: NextRequest) {
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
+        // Auth/quota are terminal for the whole batch — stop immediately instead
+        // of writing a failure row + 2 SSE events for every remaining video.
+        // Unlike the other YouTube write routes, cleanup does NOT enqueue the
+        // remainder for retry: it's a find/replace, so each remaining item's new
+        // description can only be computed after a videos.list read — which needs
+        // the very quota we just exhausted. The resume path is to re-run "Find
+        // matching descriptions" after the quota resets; only the still-matching
+        // videos come back (the cache is updated as we go).
         if (isYouTubeAuthError(error)) {
-          abortReason = 'auth';
           void markTokenRevoked();
-          console.warn(`🔑 YouTube auth expired during description cleanup — aborting`);
-        } else if (isYouTubeQuotaError(error)) {
-          abortReason = 'quota';
-          console.log(`📊 YouTube quota exhausted — aborting cleanup at video ${videoId}`);
+          failed++;
+          addActivityLogEntry({ operationRunId: operationId, identifier: videoId, status: 'failure', errorMessage: 'Auth expired — re-authorize YouTube' });
+          send({ type: 'progress', current: i + 1, total: videoIds.length, identifier: videoId, status: 'error', error: 'Auth expired — re-authorize YouTube' });
+          results.push({ identifier: videoId, success: false, error: 'Auth expired' });
+          console.warn(`🔑 YouTube auth expired during description cleanup — aborting (${videoIds.length - i - 1} item(s) skipped)`);
+          break;
+        }
+
+        if (isYouTubeQuotaError(error)) {
+          failed++;
+          const skipped = videoIds.length - i - 1;
+          addActivityLogEntry({ operationRunId: operationId, identifier: videoId, status: 'failure', errorMessage: 'Quota exhausted — re-run search after midnight Pacific to finish' });
+          send({ type: 'progress', current: i + 1, total: videoIds.length, identifier: videoId, status: 'error', error: `Quota exhausted — ${skipped} remaining; re-run search after reset` });
+          results.push({ identifier: videoId, success: false, error: 'Quota exhausted' });
+          console.log(`📊 YouTube quota exhausted at item ${i + 1}/${videoIds.length} — ${skipped} skipped (re-search after reset)`);
+          break;
         }
 
         failed++;
@@ -179,7 +188,7 @@ export async function POST(req: NextRequest) {
         results.push({ identifier: videoId, success: false, error: errorMessage });
       }
 
-      if (i < videoIds.length - 1 && !abortReason) await sleep(200);
+      if (i < videoIds.length - 1) await sleep(200);
     }
 
     finishOperationRun(operationId, { successfulItems: successful, noChangeItems: noChange, failedItems: failed });

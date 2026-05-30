@@ -15,6 +15,10 @@
  *   - add + array containing value → drop (no-op)
  *   - add + scalar equal to value → drop (no-op)
  *   - remove + field absent → drop (no-op)
+ *   - remove + empty value → remove the whole field (what the UI sends)
+ *   - remove + value matching a scalar → remove the field
+ *   - remove + value in a multi-value array → remove just that index (not the array)
+ *   - remove + value absent → drop (no-op)
  *   - replace + scalar equal to value → drop (no-op)
  *   - replace + single-element array equal to value → drop (no-op)
  */
@@ -60,10 +64,33 @@ export function planPatches(
     }
 
     if (u.operation === 'remove') {
-      if (currentVal == null) continue;
-      if (typeof currentVal === 'string' && currentVal !== u.value) continue;
-      if (Array.isArray(currentVal) && !currentVal.includes(u.value)) continue;
-      patches.push({ op: 'remove', path: `/${u.field}`, value: u.value });
+      if (currentVal == null) continue; // field already absent — nothing to remove
+
+      // Empty value means "remove the whole field" — this is what the UI sends
+      // (it hides the value input for remove). Without this branch, removing a
+      // field that has any real value was a silent no-op.
+      if (u.value === '') {
+        patches.push({ op: 'remove', path: `/${u.field}`, value: '' });
+        continue;
+      }
+
+      // A value was given — remove just that value.
+      if (typeof currentVal === 'string') {
+        if (currentVal !== u.value) continue; // value not present
+        patches.push({ op: 'remove', path: `/${u.field}`, value: u.value });
+        continue;
+      }
+
+      if (Array.isArray(currentVal)) {
+        const idx = currentVal.indexOf(u.value);
+        if (idx === -1) continue; // value not present
+        // Removing the sole element clears the field. For a multi-value field,
+        // target the specific index (RFC 6902 array path) so we DON'T nuke the
+        // other values — the previous code removed the entire array.
+        const path = currentVal.length === 1 ? `/${u.field}` : `/${u.field}/${idx}`;
+        patches.push({ op: 'remove', path, value: u.value });
+        continue;
+      }
     }
   }
 
