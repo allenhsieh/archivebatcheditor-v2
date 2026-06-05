@@ -8,8 +8,12 @@ import { youtubeChannelCacheVideos } from '@/db/schema';
 // find/replace.
 
 export async function GET(req: NextRequest) {
-  const q = req.nextUrl.searchParams.get('q')?.trim() ?? '';
-  if (!q) {
+  // Don't trim: a trailing/leading space is significant. Searching "download @  "
+  // (two spaces) must match ONLY the double-spaced descriptions, not every
+  // "download @" — otherwise the cleanup apply reads (and burns quota on) a pile
+  // of single-space videos that just no-op. Reject only an all-whitespace query.
+  const q = req.nextUrl.searchParams.get('q') ?? '';
+  if (q.trim() === '') {
     return NextResponse.json({ error: 'Query parameter "q" is required' }, { status: 400 });
   }
 
